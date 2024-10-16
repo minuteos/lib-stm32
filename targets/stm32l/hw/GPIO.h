@@ -25,36 +25,42 @@ class GPIOPinID
 {
     union
     {
-        uint8_t id;
+        uint16_t id;
+        uint8_t pinId;
         struct
         {
             uint8_t port : 4;
             uint8_t index : 4;
+            uint8_t afn : 4;
         };
     };
 
 public:
-    //! Creates an invalid GPIOPinID
-    //! Creates a GPIOPinID from the provided port (0-14) and pin index (0-15)
-    constexpr GPIOPinID(int port, int index) : port(port + 1), index(index) {}
+    //! Creates a GPIOPinID from the provided port (0-14), pin index (0-15) and alt function (0-15)
+    constexpr GPIOPinID(int port, int index, int afn = 0) : port(port + 1), index(index), afn(afn) {}
     //! Creates a GPIOPinID from the provided compact representation
-    constexpr GPIOPinID(uint8_t id) : id(id) {}
+    constexpr GPIOPinID(uint16_t id) : id(id) {}
 
     //! Checks if this is a valid GPIO pin
     constexpr bool IsValid() const { return !!id; }
     //! Gets the port index (0-14, 0=A)
     constexpr int Port() const { return port - 1; }
-    //! Gets the port index (0-15)
+    //! Gets the pin index (0-15)
     constexpr int Pin() const { return index; }
+    //! Gets the alt function index (0-15)
+    constexpr int Alt() const { return afn; }
 
     //! Gets the numeric representation of the Pin ID
-    constexpr operator uint8_t() const { return id; }
+    constexpr operator uint16_t() const { return id; }
+
+    friend class GPIOPin;
 };
 
-//! Location lookup table type
-typedef const GPIOPinID* GPIOLocations_t;
-//! Location lookup table definition
-#define GPIO_LOC(...)    ((const GPIOPinID[]){__VA_ARGS__, 0})
+//! Alternate function lookup table type
+typedef const GPIOPinID GPIOPinTable_t[];
+typedef const GPIOPinID* GPIOPinTables_t[];
+//! Alternate function lookup table definition
+#define GPIO_PINS(...)    {__VA_ARGS__, GPIOPinID(0) }
 
 //! Representation of a GPIO pin
 class GPIOPin
@@ -66,6 +72,8 @@ class GPIOPin
         ModeOffset = 0,
         SpeedOffset = 4,
         PullOffset = 6,
+        FlagsOffset = 8,
+        AltOffset = 12,
     };
 
 public:
@@ -138,6 +146,8 @@ public:
     void ConfigureOpenDrain(bool set = true) const { Configure(Mode(Output | OpenDrain | (set * FlagSet))); }
     //! Configures the GPIOPin as an analog input
     void ConfigureAnalog() const { Configure(Mode(Analog)); }
+    //! Configures the GPIOPin for an alternate function
+    void ConfigureAlternate(GPIOPinTable_t table, Mode mode = Mode::Alternate) const;
     //! Disables the GPIOPin
     void Disable() const { Configure(Disabled); }
 
@@ -184,7 +194,7 @@ public:
     //! Gets a GPIOPin instance for the specified pin on port A
     #define PA(n)    GPIOPort::A(n)
     //! Gets a GPIOPinID for the specified pin on port A
-    #define pA(n)    GPIOPinID(0, (n))
+    #define pA(...)    GPIOPinID(0, __VA_ARGS__)
 #endif
 
 #if GPIOB_BASE
@@ -193,7 +203,7 @@ public:
     //! Gets a GPIOPin instance for the specified pin on port B
     #define PB(n)    GPIOPort::B(n)
     //! Gets a GPIOPinID for the specified pin on port B
-    #define pB(n)    GPIOPinID(1, (n))
+    #define pB(...)    GPIOPinID(1, __VA_ARGS__)
 #endif
 
 #if GPIOC_BASE
@@ -202,7 +212,7 @@ public:
     //! Gets a GPIOPin instance for the specified pin on port C
     #define PC(n)    GPIOPort::C(n)
     //! Gets a GPIOPinID for the specified pin on port C
-    #define pC(n)    GPIOPinID(2, (n))
+    #define pC(...)    GPIOPinID(2, __VA_ARGS__)
 #endif
 
 #if GPIOD_BASE
@@ -211,7 +221,7 @@ public:
     //! Gets a GPIOPin instance for the specified pin on port D
     #define PD(n)    GPIOPort::D(n)
     //! Gets a GPIOPinID for the specified pin on port D
-    #define pD(n)    GPIOPinID(3, (n))
+    #define pD(...)    GPIOPinID(3, __VA_ARGS__)
 #endif
 
 #if GPIOE_BASE
@@ -220,7 +230,7 @@ public:
     //! Gets a GPIOPin instance for the specified pin on port E
     #define PE(n)    GPIOPort::E(n)
     //! Gets a GPIOPinID for the specified pin on port E
-    #define pE(n)    GPIOPinID(4, (n))
+    #define pE(...)    GPIOPinID(4, __VA_ARGS__)
 #endif
 
 #if GPIOF_BASE
@@ -229,7 +239,7 @@ public:
     //! Gets a GPIOPin instance for the specified pin on port F
     #define PF(n)    GPIOPort::F(n)
     //! Gets a GPIOPinID for the specified pin on port F
-    #define pF(n)    GPIOPinID(5, (n))
+    #define pF(...)    GPIOPinID(5, __VA_ARGS__)
 #endif
 
 #if GPIOG_BASE
@@ -238,7 +248,7 @@ public:
     //! Gets a GPIOPin instance for the specified pin on port G
     #define PG(n)    GPIOPort::G(n)
     //! Gets a GPIOPinID for the specified pin on port G
-    #define pG(n)    GPIOPinID(6, (n))
+    #define pG(...)    GPIOPinID(6, __VA_ARGS__)
 #endif
 
 #if GPIOH_BASE
@@ -247,7 +257,7 @@ public:
     //! Gets a GPIOPin instance for the specified pin on port H
     #define PH(n)    GPIOPort::H(n)
     //! Gets a GPIOPinID for the specified pin on port H
-    #define pH(n)    GPIOPinID(7, (n))
+    #define pH(...)    GPIOPinID(7, __VA_ARGS__)
 #endif
 
     //! Gets a GPIOPin instance for the specified pin on the GPIOPort
