@@ -92,6 +92,8 @@ public:
     //! Gets the index of the GPIOPin
     /*! If there are multiple bits set in the Mask, the index of the lowest one is returned */
     constexpr uint32_t Index() const { return __builtin_ctz(mask); }
+    //! Gets the number of consecutive pins of a multi-pin GPIOPin
+    constexpr uint32_t Size() const { return 32 - __builtin_ctz(mask) - __builtin_clz(mask); }
 
     //! Gets a compact location representation GPIOPinID of the GPIOPin
     /*! Use the @link pA p<port>(<pin>) @endlink macros to get GPIOPinID instances when possible */
@@ -166,6 +168,10 @@ public:
     void Res() const;
     //! Sets the output of the GPIOPin to the desired @p state
     void Set(bool state) const;
+    //! Reads the input state of the GPIOPin range
+    uint32_t Read() const;
+    //! Sets the output of the GPIOPin range to the desired @p value
+    void Write(uint32_t value) const;
     //! Toggles the output of the GPIOPin
     void Toggle() const;
 #ifdef Ckernel
@@ -192,7 +198,9 @@ public:
     //! Gets a GPIOPin instance for the specified pin on port A
     static constexpr GPIOPin A(int pin) { return GPIOPin(GPIO_P(0), BIT(pin)); }
     //! Gets a GPIOPin instance for the specified pin on port A
-    #define PA(n)    GPIOPort::A(n)
+    static constexpr GPIOPin A(int pin, int count) { return GPIOPin(GPIO_P(0), MASK(count) << pin); }
+    //! Gets a GPIOPin instance for the specified pin on port A
+    #define PA         GPIOPort::A
     //! Gets a GPIOPinID for the specified pin on port A
     #define pA(...)    GPIOPinID(0, __VA_ARGS__)
 #endif
@@ -201,7 +209,9 @@ public:
     //! Gets a GPIOPin instance for the specified pin on port B
     static constexpr GPIOPin B(int pin) { return GPIOPin(GPIO_P(1), BIT(pin)); }
     //! Gets a GPIOPin instance for the specified pin on port B
-    #define PB(n)    GPIOPort::B(n)
+    static constexpr GPIOPin B(int pin, int count) { return GPIOPin(GPIO_P(1), MASK(count) << pin); }
+    //! Gets a GPIOPin instance for the specified pin on port B
+    #define PB         GPIOPort::B
     //! Gets a GPIOPinID for the specified pin on port B
     #define pB(...)    GPIOPinID(1, __VA_ARGS__)
 #endif
@@ -210,7 +220,9 @@ public:
     //! Gets a GPIOPin instance for the specified pin on port C
     static constexpr GPIOPin C(int pin) { return GPIOPin(GPIO_P(2), BIT(pin)); }
     //! Gets a GPIOPin instance for the specified pin on port C
-    #define PC(n)    GPIOPort::C(n)
+    static constexpr GPIOPin C(int pin, int count) { return GPIOPin(GPIO_P(2), MASK(count) << pin); }
+    //! Gets a GPIOPin instance for the specified pin on port C
+    #define PC         GPIOPort::C
     //! Gets a GPIOPinID for the specified pin on port C
     #define pC(...)    GPIOPinID(2, __VA_ARGS__)
 #endif
@@ -219,7 +231,9 @@ public:
     //! Gets a GPIOPin instance for the specified pin on port D
     static constexpr GPIOPin D(int pin) { return GPIOPin(GPIO_P(3), BIT(pin)); }
     //! Gets a GPIOPin instance for the specified pin on port D
-    #define PD(n)    GPIOPort::D(n)
+    static constexpr GPIOPin D(int pin, int count) { return GPIOPin(GPIO_P(3), MASK(count) << pin); }
+    //! Gets a GPIOPin instance for the specified pin on port D
+    #define PD         GPIOPort::D
     //! Gets a GPIOPinID for the specified pin on port D
     #define pD(...)    GPIOPinID(3, __VA_ARGS__)
 #endif
@@ -228,7 +242,9 @@ public:
     //! Gets a GPIOPin instance for the specified pin on port E
     static constexpr GPIOPin E(int pin) { return GPIOPin(GPIO_P(4), BIT(pin)); }
     //! Gets a GPIOPin instance for the specified pin on port E
-    #define PE(n)    GPIOPort::E(n)
+    static constexpr GPIOPin E(int pin, int count) { return GPIOPin(GPIO_P(4), MASK(count) << pin); }
+    //! Gets a GPIOPin instance for the specified pin on port E
+    #define PE         GPIOPort::E
     //! Gets a GPIOPinID for the specified pin on port E
     #define pE(...)    GPIOPinID(4, __VA_ARGS__)
 #endif
@@ -237,7 +253,9 @@ public:
     //! Gets a GPIOPin instance for the specified pin on port F
     static constexpr GPIOPin F(int pin) { return GPIOPin(GPIO_P(5), BIT(pin)); }
     //! Gets a GPIOPin instance for the specified pin on port F
-    #define PF(n)    GPIOPort::F(n)
+    static constexpr GPIOPin F(int pin, int count) { return GPIOPin(GPIO_P(5), MASK(count) << pin); }
+    //! Gets a GPIOPin instance for the specified pin on port F
+    #define PF         GPIOPort::F
     //! Gets a GPIOPinID for the specified pin on port F
     #define pF(...)    GPIOPinID(5, __VA_ARGS__)
 #endif
@@ -246,7 +264,9 @@ public:
     //! Gets a GPIOPin instance for the specified pin on port G
     static constexpr GPIOPin G(int pin) { return GPIOPin(GPIO_P(6), BIT(pin)); }
     //! Gets a GPIOPin instance for the specified pin on port G
-    #define PG(n)    GPIOPort::G(n)
+    static constexpr GPIOPin G(int pin, int count) { return GPIOPin(GPIO_P(6), MASK(count) << pin); }
+    //! Gets a GPIOPin instance for the specified pin on port G
+    #define PG         GPIOPort::G
     //! Gets a GPIOPinID for the specified pin on port G
     #define pG(...)    GPIOPinID(6, __VA_ARGS__)
 #endif
@@ -254,8 +274,10 @@ public:
 #if GPIOH_BASE
     //! Gets a GPIOPin instance for the specified pin on port H
     static constexpr GPIOPin H(int pin) { return GPIOPin(GPIO_P(7), BIT(pin)); }
+    //! Gets a GPIOPin instance for the specified pin range on port H
+    static constexpr GPIOPin H(int pin, int count) { return GPIOPin(GPIO_P(7), MASK(count) << pin); }
     //! Gets a GPIOPin instance for the specified pin on port H
-    #define PH(n)    GPIOPort::H(n)
+    #define PH         GPIOPort::H
     //! Gets a GPIOPinID for the specified pin on port H
     #define pH(...)    GPIOPinID(7, __VA_ARGS__)
 #endif
@@ -325,14 +347,19 @@ ALWAYS_INLINE async(GPIOPin::WaitFor, bool state, Timeout timeout) { return asyn
 
 ALWAYS_INLINE void GPIOPin::Set() const { port->BSRR = mask; }
 ALWAYS_INLINE void GPIOPin::Res() const { port->BRR = mask; }
-#ifdef EFM32_PERIPHERAL_BITTGL
-ALWAYS_INLINE void GPIOPin::Toggle() const { EFM32_BITTGL(port->DOUT, mask); }
-#else
 ALWAYS_INLINE void GPIOPin::Toggle() const
 {
     const uint32_t s = port->ODR;
     port->BSRR = (~s & mask) | ((s & mask) << 16);
 }
-#endif
 ALWAYS_INLINE void GPIOPin::Set(bool state) const { state ? Set() : Res(); }
+ALWAYS_INLINE uint32_t GPIOPin::Read() const
+{
+    return (port->IDR & mask) >> __builtin_ctz(mask);
+}
+ALWAYS_INLINE void GPIOPin::Write(uint32_t value) const
+{
+    value <<= __builtin_ctz(mask);
+    port->BSRR = (value & mask) | ((~value & mask) << 16);
+}
 ALWAYS_INLINE bool GPIOPin::Get() const { return port->IDR & mask; }

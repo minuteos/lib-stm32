@@ -13,20 +13,35 @@ const char* GPIOPin::Name() const
     if (!mask)
         return "Px";
 
-    static char tmp[4];
+    static char tmp[7];
     int index = Index();
-    tmp[0] = 'A' + Port().Index();
-    if (index < 10)
+    int size = Size();
+    char* p = tmp;
+    *p++ = 'A' + Port().Index();
+
+    for (;;)
     {
-        tmp[1] = '0' + index;
-        tmp[2] = 0;
+        if (index < 10)
+        {
+            *p++ = '0' + index;
+        }
+        else
+        {
+            *p++ = '0' + index / 10;
+            *p++ = '0' + index % 10;
+        }
+
+        if (size <= 1)
+        {
+            break;
+        }
+
+        // pin range
+        *p++ = ':';
+        index += size - 1;
+        size = 0;
     }
-    else
-    {
-        tmp[1] = '0' + index / 10;
-        tmp[2] = '0' + index % 10;
-        tmp[3] = 0;
-    }
+    *p++ = 0;
     return tmp;
 }
 
@@ -99,3 +114,20 @@ void GPIOPort::Configure(uint32_t mask, GPIOPin::Mode mode)
         MODMASK(MODER, MASK(2) << shift, ((mode >> GPIOPin::ModeOffset) & MASK(2)) << shift);
     } while(mask);
 }
+
+#ifdef Ckernel
+async(GPIOPort::WaitFor, uint32_t indexAndState, Timeout timeout)
+async_def(
+    uint8_t index;
+    bool state;
+    uint32_t intMask;
+)
+{
+    f.index = indexAndState & 0xF;
+    f.state = indexAndState & 0x10;
+    // TODO: wake from sleep on change
+    bool result = await_mask_timeout(IDR, BIT(f.index), BIT(f.index) * f.state, timeout);
+    async_return(result);
+}
+async_end
+#endif
