@@ -26,4 +26,18 @@ struct _RCC : RCC_TypeDef
         ASSERT(index < 2);
         AHB1ENR |= RCC_AHB1ENR_DMA1EN << index;
     }
+
+    void EnableTimer(unsigned index)
+    {
+        index++;
+        switch (index)
+        {
+            case 2 ... 7:
+                APB1ENR1 |= RCC_APB1ENR1_TIM2EN << (index - 2);
+                break;
+            default:
+                ASSERT(false);
+                break;
+        }
+    }
 };
