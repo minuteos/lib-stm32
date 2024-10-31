@@ -25,7 +25,7 @@
 struct I2C : I2C_TypeDef
 {
     //! Gets the zero-based index of the peripheral
-    unsigned Index() const { return ((unsigned)this - I2C1_BASE) / (I2C2_BASE - I2C1_BASE); }
+    unsigned Index() const { return (((unsigned)this >> 10) & 3) - 1; }
 
     //! Enables the peripheral
     void Enable() { CR1 |= I2C_CR1_PE; }
@@ -33,7 +33,7 @@ struct I2C : I2C_TypeDef
     void Disable() { CR1 &= ~I2C_CR1_PE; }
     //! Checks whether the peripheral is enabled
     bool IsEnabled() const { return CR1 & I2C_CR1_PE; }
-    
+
     //! Sends one byte of data
     void Send(uint8_t data) { TXDR = data; }
     //! Receives one byte of data
@@ -47,7 +47,7 @@ struct I2C : I2C_TypeDef
     void EnableClock() { RCC->EnableI2C(Index()); }
     IRQ ErrorIRQ() const { return LOOKUP_TABLE(IRQn_Type, I2C1_ER_IRQn, I2C2_ER_IRQn, I2C3_ER_IRQn)[Index()]; }
     IRQ EventIRQ() const { return LOOKUP_TABLE(IRQn_Type, I2C1_EV_IRQn, I2C2_EV_IRQn, I2C3_EV_IRQn)[Index()]; }
-    
+
     void ConfigureScl(GPIOPin pin, GPIOPin::Mode mode = GPIOPin::OpenDrain | GPIOPin::SpeedVeryHigh)
         { pin.ConfigureAlternate(afScl[Index()], mode); }
     void ConfigureSda(GPIOPin pin, GPIOPin::Mode mode = GPIOPin::OpenDrain | GPIOPin::SpeedVeryHigh)
@@ -61,55 +61,55 @@ struct I2C : I2C_TypeDef
     //! Resets the bus
     async(Reset);
 
-    //! Starts or restarts a read transaction, reading the specified number of bytes from the bus
-    async(Read, uint8_t address, Buffer data, bool start, bool stop) { return async_forward(_Read, Operation(address, true, true, stop, data.Length()), data.Pointer()); }
-    //! Continues a read transaction, reading the specified number of bytes from the bus
-    async(Read, Buffer data, bool stop) { return async_forward(_Read, Operation(true, stop, data.Length()), data.Pointer()); }
+    //! Next action after this operation
+    enum struct Next
+    {
+        //! Send an I2C stop condition
+        Stop,
+        //! Continue the same operation
+        Continue,
+        //! Restart a different operation (but keep holding the bus)
+        Restart
+    };
 
-    //! Starts or restarts a write transaction, writing the specified number of bytes to the bus
-    async(Write, uint8_t address, Span data, bool start, bool stop) { return async_forward(_Write, Operation(address, false, true, stop, data.Length()), data.Pointer()); }
-    //! Continues a write transaction, writing the specified number of bytes to the bus
-    async(Write, Span data, bool stop) { return async_forward(_Write, Operation(false, stop, data.Length()), data.Pointer()); }
+    //! Device control structure
+    class Device
+    {
+        I2C& i2c;           //< I2C peripheral reference
+        uint8_t address;    //< Device address
+        bool active : 1;    //< The device is currently active
+        bool reloaded : 1;  //< Previous transfer had the RELOAD flag set
+        uint16_t wx;        //< Number of bytes transferred in the last operation
+
+    public:
+        // prevent copying the instance as it is used to track state
+        Device(const Device&) = delete;
+        Device& operator=(const Device&) = delete;
+
+        constexpr Device(I2C& i2c, uint8_t address)
+            : i2c(i2c), address(address), active{}, reloaded{}, wx{} {}
+
+        I2C& Bus() const { return i2c; }
+        uint8_t Address() const { return address; }
+        unsigned Transferred() const { return wx; }
+
+        async(Read, Buffer data, Next next = Next::Stop);
+        async(Write, Span data, Next next = Next::Stop);
+
+    private:
+        unsigned Index() const { return i2c.Index(); }
+
+        //! Acquires the bus for communication with the specified device
+        async(Acquire);
+        //! Releases the bus
+        void Release();
+    };
+
+    constexpr Device Master(uint8_t address) { return Device(*this, address); }
 
 private:
     static const GPIOPinTables_t afScl;
     static const GPIOPinTables_t afSda;
-
-    union Operation
-    {
-        constexpr Operation(uint8_t address, bool read, bool start, bool stop, uint8_t length)
-            : value(address << 1 | read * I2C_CR2_RD_WRN | start * I2C_CR2_START | stop * I2C_CR2_AUTOEND | (length << I2C_CR2_NBYTES_Pos)) {}
-        constexpr Operation(bool read, bool stop, uint16_t length)
-            : value(read * I2C_CR2_RD_WRN | I2C_CR2_START | stop * I2C_CR2_AUTOEND | (length << I2C_CR2_NBYTES_Pos)) {}
-
-        uint32_t value;
-        struct
-        {
-            union
-            {
-                struct
-                {
-                    uint16_t : 1;
-                    uint16_t addr7 : 7;
-                    uint16_t : 2;
-                    bool read : 1;
-                    bool send10 : 1;
-                    bool head10 : 1;
-                    bool start : 1;
-                    bool stop : 1;
-                    bool nack : 1;
-                };
-                uint16_t addr10 : 10;
-            };
-            uint8_t length;
-            bool reload : 1;
-            bool autoEnd : 1;
-            bool pecByte : 1;
-        };
-    };
-
-    async(_Read, Operation op, char* data);
-    async(_Write, Operation op, const char* data);
 };
 
 template<unsigned n> struct _I2C : I2C
