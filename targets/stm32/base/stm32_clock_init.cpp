@@ -64,4 +64,9 @@ void _stm32_clock_init()
         // lock RTC
         RTC->WPR = 0;
     }
+
+#ifdef DEBUG
+    // freeze RTC when debugging
+    DBGMCU->APB1FZR1 |= DBGMCU_APB1FZR1_DBG_RTC_STOP;
+#endif
 }
