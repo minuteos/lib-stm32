@@ -52,14 +52,14 @@ void GPIOPin::ConfigureAlternate(GPIOPinTable_t table, GPIOPin::Mode mode) const
     {
         if (p->pinId == pin)
         {
-            
+
             Configure(mode | Alternate | Mode(p->afn << AltOffset));
             return;
         }
     }
 
     DBGC("gpio", "Requested alternate function not found on %s", Name());
-    ASSERT(false); 
+    ASSERT(false);
 }
 
 void GPIOPort::Configure(uint32_t mask, GPIOPin::Mode mode)
@@ -116,8 +116,8 @@ void GPIOPort::Configure(uint32_t mask, GPIOPin::Mode mode)
 }
 
 #ifdef Ckernel
-async(GPIOPort::WaitFor, uint32_t indexAndState, Timeout timeout)
-async_def(
+async_once(GPIOPort::WaitFor, uint32_t indexAndState, Timeout timeout)
+async_once_def(
     uint8_t index;
     bool state;
     uint32_t intMask;

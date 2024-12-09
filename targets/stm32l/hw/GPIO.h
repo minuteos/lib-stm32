@@ -128,7 +128,7 @@ public:
         SpeedHigh = 0b10 << 4,
         //! Pin is used to drive medium-speed peripherals
         SpeedVeryHigh = 0b11 << 4,
-        
+
         //! Enable the internal pull-up
         PullUp = 0b01 << 6,
         //! Enable the internal pull-down
@@ -176,7 +176,7 @@ public:
     void Toggle() const;
 #ifdef Ckernel
     //! Waits for the pin to have the specified state
-    async(WaitFor, bool state, Timeout timeout = Timeout::Infinite);
+    async_once(WaitFor, bool state, Timeout timeout = Timeout::Infinite);
 #endif
 
     //! Gets the input state of the GPIOPin
@@ -319,7 +319,7 @@ private:
 
     void Configure(uint32_t mask, enum GPIOPin::Mode mode);
 #ifdef Ckernel
-    async(WaitFor, uint32_t indexAndState, Timeout timeout = Timeout::Infinite);
+    async_once(WaitFor, uint32_t indexAndState, Timeout timeout = Timeout::Infinite);
 #endif
 
 #if TRACE
@@ -342,7 +342,7 @@ ALWAYS_INLINE constexpr GPIOPinID GPIOPin::GetID() const { return GPIOPinID(GPIO
 
 ALWAYS_INLINE void GPIOPin::Configure(Mode mode) const { port->Configure(mask, mode); }
 #ifdef Ckernel
-ALWAYS_INLINE async(GPIOPin::WaitFor, bool state, Timeout timeout) { return async_forward(Port().WaitFor, (state << 4) | Index(), timeout); }
+ALWAYS_INLINE async_once(GPIOPin::WaitFor, bool state, Timeout timeout) { return async_forward(Port().WaitFor, (state << 4) | Index(), timeout); }
 #endif
 
 ALWAYS_INLINE void GPIOPin::Set() const { port->BSRR = mask; }

@@ -39,7 +39,7 @@ struct DMADescriptor
         Circular = DMA_CCR_CIRC,
         IncrementMemory = DMA_CCR_MINC,
         IncrementPeripheral = DMA_CCR_PINC,
-        
+
         PUnitByte = 0 << DMA_CCR_PSIZE_Pos,
         PUnitHalfWord = 1 << DMA_CCR_PSIZE_Pos,
         PUnitWord = 2 << DMA_CCR_PSIZE_Pos,
@@ -99,14 +99,14 @@ struct DMAChannel : DMA_Channel_TypeDef
     bool IsEnabled() const { return CCR & DMA_CCR_EN; }
 
 #if Ckernel
-    ALWAYS_INLINE async(WaitForEnabled, bool state)
-    async_def_once()
+    ALWAYS_INLINE async_once(WaitForEnabled, bool state)
+    async_once_def()
     {
         await_mask(CCR, DMA_CCR_EN, state ? DMA_CCR_EN : 0);
     }
     async_end
 
-    async(WaitForComplete);
+    async_once(WaitForComplete);
 #endif
 };
 
@@ -135,11 +135,11 @@ struct DMA : DMA_TypeDef
     bool TransferComplete(unsigned channel) { channel--; ASSERT(channel < 7); return ISR & 2 << (channel << 2); }
 
 #if Ckernel
-    ALWAYS_INLINE async(WaitForComplete, unsigned channel)
-    async_def_once()
+    ALWAYS_INLINE async_once(WaitForComplete, unsigned channel)
+    async_once_def()
     {
         channel--;
-        ASSERT(channel < 7); 
+        ASSERT(channel < 7);
         await_mask_not(ISR, 2 << (channel < 2), 0);
     }
     async_end
@@ -148,6 +148,6 @@ struct DMA : DMA_TypeDef
 
 #if Ckernel
 
-ALWAYS_INLINE async(DMAChannel::WaitForComplete) { return async_forward(DMA().WaitForComplete, Index() + 1); }
+ALWAYS_INLINE async_once(DMAChannel::WaitForComplete) { return async_forward(DMA().WaitForComplete, Index() + 1); }
 
 #endif
