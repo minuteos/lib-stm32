@@ -104,6 +104,9 @@ struct DMAChannel : DMA_Channel_TypeDef
     //! Releases the channel (disables it and makes it available for other use)
     void Release() { CCR = 0; }
 
+    //! Gets the IRQ for the current DMA channel
+    class IRQ IRQ() const;
+
 #if Ckernel
     ALWAYS_INLINE async_once(WaitForEnabled, bool state)
     async_once_def()

@@ -29,3 +29,13 @@ DMAChannel* DMA::ClaimChannel(uint32_t specs)
 
     return NULL;
 }
+
+class IRQ DMAChannel::IRQ() const
+{
+    // need a lookup table as the numbers aren't completely contiguous
+    return LOOKUP_TABLE(IRQn_Type,
+            DMA1_Channel1_IRQn, DMA1_Channel2_IRQn, DMA1_Channel3_IRQn, DMA1_Channel4_IRQn, DMA1_Channel5_IRQn, DMA1_Channel6_IRQn, DMA1_Channel7_IRQn, {},
+            DMA2_Channel1_IRQn, DMA2_Channel2_IRQn, DMA2_Channel3_IRQn, DMA2_Channel4_IRQn, DMA2_Channel5_IRQn, DMA2_Channel6_IRQn, DMA2_Channel7_IRQn
+            )
+        [DMA().Index() << 3 | Index()];
+}
