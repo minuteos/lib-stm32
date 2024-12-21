@@ -9,6 +9,7 @@
 #pragma once
 
 #include <base/base.h>
+#include <base/Span.h>
 
 #include <hw/RCC.h>
 #include <hw/IRQ.h>
@@ -107,6 +108,13 @@ struct DMAChannel : DMA_Channel_TypeDef
     //! Gets the IRQ for the current DMA channel
     class IRQ IRQ() const;
 
+    //! Attempts to link a buffer, returning the number of bytes successfully linked
+    size_t TryLinkBuffer(Span buf);
+    //! Unlinks all buffers and stops the transfer to the current one
+    void Unlink();
+    //! Retrieves the memory location where next transfer will take place
+    const char* LinkPointer();
+
 #if Ckernel
     ALWAYS_INLINE async_once(WaitForEnabled, bool state)
     async_once_def()
@@ -116,7 +124,12 @@ struct DMAChannel : DMA_Channel_TypeDef
     async_end
 
     async_once(WaitForComplete);
+    //! Waits until the transfer pointer moves away from the specified
+    async_once(LinkPointerNot, const char* p, Timeout timeout = Timeout::Infinite);
 #endif
+
+private:
+    void LinkHandler();
 };
 
 struct DMA : DMA_TypeDef
