@@ -116,7 +116,7 @@ struct _TIM : TIM
         }
         else
         {
-            static_assert(false);
+            static_assert(false, "TIM APB not 1/2? Or the compiler doesn't handle constexpr correctly.");
         }
     }
 
