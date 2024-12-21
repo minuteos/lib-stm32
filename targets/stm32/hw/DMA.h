@@ -11,6 +11,7 @@
 #include <base/base.h>
 
 #include <hw/RCC.h>
+#include <hw/IRQ.h>
 
 #if Ckernel
 #include <kernel/kernel.h>
@@ -89,16 +90,19 @@ struct DMAChannel : DMA_Channel_TypeDef
 {
     uint32_t : 32;  // reserved word, not included in DMA_Channel_TypeDef
 
-    struct DMA& DMA() { return *(struct DMA*)((uint32_t)this & ~0xFF); }
+    struct DMA& DMA() const { return *(struct DMA*)((uint32_t)this & ~0xFF); }
 
     //! Gets the zero-based channel Index
-    int Index() { return (((uint32_t)this - DMA1_Channel1_BASE) & 0xFF) / sizeof(DMAChannel); }
+    int Index() const { return (((uint32_t)this - DMA1_Channel1_BASE) & 0xFF) / sizeof(DMAChannel); }
 
     //! Enables the DMA channel
     void Enable() { CCR |= DMA_CCR_EN; }
     //! Disables the DMA channel
     void Disable() { CCR &= ~DMA_CCR_EN; }
+    //! Returns true if the channel is enabled
     bool IsEnabled() const { return CCR & DMA_CCR_EN; }
+    //! Releases the channel (disables it and makes it available for other use)
+    void Release() { CCR = 0; }
 
 #if Ckernel
     ALWAYS_INLINE async_once(WaitForEnabled, bool state)
@@ -124,7 +128,7 @@ struct DMA : DMA_TypeDef
     void EnableClock() { RCC->EnableDMA(Index()); }
 
     //! Gets the zero-based index of the peripheral
-    unsigned Index() const { return (unsigned(this) - DMA1_BASE) / (DMA2_BASE - DMA1_BASE); }
+    unsigned Index() const { return (uintptr_t(this) >> 10) & 1; }
 
     //! Gets the specified channel
     DMAChannel& Channel(unsigned channel) { channel--; ASSERT(channel < 7); return CH[channel]; }
@@ -146,6 +150,26 @@ struct DMA : DMA_TypeDef
     }
     async_end
 #endif
+
+    struct ChannelSpec
+    {
+        union
+        {
+            struct
+            {
+                uint8_t dma : 1;
+                uint8_t ch : 3;
+                uint8_t map : 4;
+            };
+            uint8_t spec;
+        };
+    };
+
+    static DMAChannel* ClaimChannel(const ChannelSpec& spec) { return ClaimChannel(spec.spec); }
+    static DMAChannel* ClaimChannel(const ChannelSpec& spec, const ChannelSpec& altSpec) { return ClaimChannel(spec.spec | altSpec.spec << 8); }
+
+private:
+    static DMAChannel* ClaimChannel(uint32_t specs);
 };
 
 #if Ckernel
