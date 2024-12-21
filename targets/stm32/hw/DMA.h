@@ -6,6 +6,8 @@
  * stm32l/hw/DMA.h
  */
 
+#pragma once
+
 #include <base/base.h>
 
 #include <hw/RCC.h>
@@ -53,9 +55,9 @@ struct DMADescriptor
         UnitWord = PUnitWord | MUnitWord,
 
         PrioLow = 0 << DMA_CCR_PL_Pos,
-        PrioMedium = 0 << DMA_CCR_PL_Pos,
-        PrioHigh = 0 << DMA_CCR_PL_Pos,
-        PrioVeryHigh = 0 << DMA_CCR_PL_Pos,
+        PrioMedium = 1 << DMA_CCR_PL_Pos,
+        PrioHigh = 2 << DMA_CCR_PL_Pos,
+        PrioVeryHigh = 3 << DMA_CCR_PL_Pos,
     };
 
     static constexpr DMADescriptor Transfer(volatile const void* source, volatile void* destination, size_t count, Flags flags)
