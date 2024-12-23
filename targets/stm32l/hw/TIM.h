@@ -46,35 +46,23 @@ struct TIM : TIM_TypeDef
 
 DEFINE_FLAG_ENUM(TIM::OCMode);
 
-template <unsigned ntim, unsigned nch>
-struct _TIMGPIO
+typedef volatile uint32_t TIM_TypeDef::*TIM_regptr_t;
+
+template<unsigned n>
+struct _TIMChReg : TIM_TypeDef
 {
-    static const GPIOPinTable_t afPin;
-    static const GPIOPinTable_t afNeg;
+    volatile uint32_t& CCR();
+    volatile uint32_t& CCMR();
 };
 
-template <typename TTIM, unsigned n, unsigned ccr, unsigned ccmr>
-struct _TIMChannel
-{
-    using TIMGPIO_t = _TIMGPIO<TTIM::N, n>;
-    static constexpr unsigned N = n;
-    static constexpr unsigned CCR_OFF = ccr;
-    static constexpr unsigned CCMR_OFF = ccmr;
+template<unsigned ntim> struct _TIM;
 
-    union
-    {
-        TTIM tim;
-        struct
-        {
-            uint8_t __ccr_offset[CCR_OFF];
-            __IO uint32_t CCR;
-        };
-        struct
-        {
-            uint8_t __ccmr_offset[CCMR_OFF];
-            __IO uint32_t CCMR;
-        };
-    };
+template <unsigned ntim, unsigned n>
+struct _TIMChannel : _TIMChReg<n>
+{
+    static constexpr unsigned N = n;
+    static const GPIOPinTable_t afPin;
+    static const GPIOPinTable_t afNeg;
 
     //! Gets the zero-based index of the channel
     constexpr unsigned Index() const { return n - 1; }
@@ -84,117 +72,173 @@ struct _TIMChannel
     static constexpr unsigned CCER_OFFSET = (n - 1) << 2;
     static constexpr uint32_t CCER_MASK = 3 << CCER_OFFSET;
 
-    void OutputCompare(TIM::OCMode mode) { MODMASK(CCMR, CCMR_MASK, uint32_t(mode) << CCMR_OFFSET); }
-    void CompareValue(uint32_t compare) { CCR = compare; }
+    void OutputCompare(TIM::OCMode mode) { MODMASK(this->CCMR(), CCMR_MASK, uint32_t(mode) << CCMR_OFFSET); }
+    void CompareValue(uint32_t compare) { this->CCR() = compare; }
     void OutputCompare(TIM::OCMode mode, uint32_t compare) { OutputCompare(mode); CompareValue(compare); }
-    void OutputEnable(bool invert = false, bool enable = true) { MODMASK(tim.CCER, CCER_MASK, (enable * TIM_CCER_CC1E | invert * TIM_CCER_CC1P) << CCER_OFFSET); }
-    void ComplementaryEnable(bool invert = true, bool enable = true) { MODMASK(tim.CCER, CCER_MASK << 2, (enable * TIM_CCER_CC1E | invert * TIM_CCER_CC1P) << CCER_OFFSET << 2); }
+    void OutputEnable(bool invert = false, bool enable = true) { MODMASK(this->CCER, CCER_MASK, (enable * TIM_CCER_CC1E | invert * TIM_CCER_CC1P) << CCER_OFFSET); }
+    void ComplementaryEnable(bool invert = true, bool enable = true) { MODMASK(this->CCER, CCER_MASK << 2, (enable * TIM_CCER_CC1E | invert * TIM_CCER_CC1P) << CCER_OFFSET << 2); }
     void OutputDisable() { OutputEnable(false, false); }
     void ComplementaryDisable() { OutputEnable(false, false); }
 
     void ConfigureOutput(GPIOPin pin, GPIOPin::Mode mode = GPIOPin::SpeedMedium)
-        { pin.ConfigureAlternate(TIMGPIO_t::afPin, mode); }
+        { pin.ConfigureAlternate(afPin, mode); }
     void ConfigureComplementary(GPIOPin pin, GPIOPin::Mode mode = GPIOPin::SpeedMedium)
-        { pin.ConfigureAlternate(TIMGPIO_t::afNeg, mode); }
+        { pin.ConfigureAlternate(afNeg, mode); }
 };
 
-template <unsigned n, unsigned apb, uint32_t enmask>
+template <unsigned n>
 struct _TIM : TIM
 {
     static constexpr unsigned N = n;
 
     //! Enables peripheral clock
-    void EnableClock()
-    {
-        if constexpr (apb == 1)
-        {
-            RCC->APB1ENR1 |= enmask;
-        }
-        else if constexpr (apb == 2)
-        {
-            RCC->APB2ENR |= enmask;
-        }
-        else
-        {
-            static_assert(false, "TIM APB not 1/2? Or the compiler doesn't handle constexpr correctly.");
-        }
-    }
+    void EnableClock() const;
 
     //! Gets the zero-based index of the peripheral
     constexpr unsigned Index() const { return n - 1; }
 
     using TIM_t = _TIM;
 
-    constexpr auto& CH1() { return *(_TIMChannel<TIM_t, 1, offsetof(TIM_TypeDef, CCR1), offsetof(TIM_TypeDef, CCMR1)>*)this; }
-    constexpr auto& CH2() { return *(_TIMChannel<TIM_t, 2, offsetof(TIM_TypeDef, CCR2), offsetof(TIM_TypeDef, CCMR1)>*)this; }
-    constexpr auto& CH3() { return *(_TIMChannel<TIM_t, 3, offsetof(TIM_TypeDef, CCR3), offsetof(TIM_TypeDef, CCMR2)>*)this; }
-    constexpr auto& CH4() { return *(_TIMChannel<TIM_t, 4, offsetof(TIM_TypeDef, CCR4), offsetof(TIM_TypeDef, CCMR2)>*)this; }
-    constexpr auto& CH5() { return *(_TIMChannel<TIM_t, 5, offsetof(TIM_TypeDef, CCR5), offsetof(TIM_TypeDef, CCMR3)>*)this; }
-    constexpr auto& CH6() { return *(_TIMChannel<TIM_t, 6, offsetof(TIM_TypeDef, CCR6), offsetof(TIM_TypeDef, CCMR3)>*)this; }
+    template<unsigned ch> _TIMChannel<n, ch>& CH() { return *(_TIMChannel<n, ch>*)this; }
+    constexpr auto& CH1() { return CH<1>(); }
+    constexpr auto& CH2() { return CH<2>(); }
+    constexpr auto& CH3() { return CH<3>(); }
+    constexpr auto& CH4() { return CH<4>(); }
+    constexpr auto& CH5() { return CH<5>(); }
+    constexpr auto& CH6() { return CH<6>(); }
 };
 
 #ifdef TIM1
 #undef TIM1
-using TIM1_t = _TIM<1, 2, RCC_APB2ENR_TIM1EN>;
+using TIM1_t = _TIM<1>;
 #define TIM1    CM_PERIPHERAL(TIM1_t, TIM1_BASE)
+
+template<> inline void TIM1_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM1EN; }
+
 #endif
 
 #ifdef TIM2
 #undef TIM2
-using TIM2_t = _TIM<2, 1, RCC_APB1ENR1_TIM2EN>;
+using TIM2_t = _TIM<2>;
 #define TIM2    CM_PERIPHERAL(TIM2_t, TIM2_BASE)
+
+template<> inline void TIM2_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN; }
+
 #endif
 
 #ifdef TIM3
 #undef TIM3
-using TIM3_t = _TIM<3, 1, RCC_APB1ENR1_TIM3EN>;
+using TIM3_t = _TIM<3>;
 #define TIM3    CM_PERIPHERAL(TIM3_t, TIM3_BASE)
+
+template<> inline void TIM3_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM3EN; }
+
 #endif
 
 #ifdef TIM4
 #undef TIM4
-using TIM4_t = _TIM<4, 1, RCC_APB1ENR1_TIM4EN>;
+using TIM4_t = _TIM<4>;
 #define TIM4    CM_PERIPHERAL(TIM4_t, TIM4_BASE)
+
+template<> inline void TIM4_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM4EN; }
+
 #endif
 
 #ifdef TIM5
 #undef TIM5
-using TIM5_t = _TIM<5, 1, RCC_APB1ENR1_TIM5EN>;
+using TIM5_t = _TIM<5>;
 #define TIM5    CM_PERIPHERAL(TIM5_t, TIM5_BASE)
+
+template<> inline void TIM5_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM5EN; }
+
 #endif
 
 #ifdef TIM6
 #undef TIM6
-using TIM6_t = _TIM<6, 1, RCC_APB1ENR1_TIM6EN>;
+using TIM6_t = _TIM<6>;
 #define TIM6    CM_PERIPHERAL(TIM6_t, TIM6_BASE)
+
+template<> inline void TIM6_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM6EN; }
+
 #endif
 
 #ifdef TIM7
 #undef TIM7
-using TIM7_t = _TIM<7, 1, RCC_APB1ENR1_TIM7EN>;
+using TIM7_t = _TIM<7>;
 #define TIM7    CM_PERIPHERAL(TIM7_t, TIM7_BASE)
+
+template<> inline void TIM7_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM7EN; }
+
 #endif
 
 #ifdef TIM8
 #undef TIM8
-using TIM8_t = _TIM<8, 2, RCC_APB2ENR_TIM8EN>;
+using TIM8_t = _TIM<8>;
 #define TIM8    CM_PERIPHERAL(TIM8_t, TIM8_BASE)
+
+template<> inline void TIM8_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM8EN; }
+
 #endif
 
 #ifdef TIM15
 #undef TIM15
-using TIM15_t = _TIM<15, 2, RCC_APB2ENR_TIM15EN>;
+using TIM15_t = _TIM<15>;
 #define TIM15    CM_PERIPHERAL(TIM15_t, TIM15_BASE)
+
+template<> inline void TIM15_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM15EN; }
+
 #endif
 
 #ifdef TIM16
 #undef TIM16
-using TIM16_t = _TIM<16, 2, RCC_APB2ENR_TIM16EN>;
+using TIM16_t = _TIM<16>;
 #define TIM16    CM_PERIPHERAL(TIM16_t, TIM16_BASE)
+
+template<> inline void TIM16_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM16EN; }
+
 #endif
 
 #ifdef TIM17
 #undef TIM17
-using TIM17_t = _TIM<17, 2, RCC_APB2ENR_TIM15EN>;
+using TIM17_t = _TIM<17>;
 #define TIM17    CM_PERIPHERAL(TIM17_t, TIM17_BASE)
+
+template<> inline void TIM17_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM17EN; }
+
 #endif
+
+template<> struct _TIMChReg<1> : TIM_TypeDef
+{
+    volatile uint32_t& CCR() { return CCR1; }
+    volatile uint32_t& CCMR() { return CCMR1; }
+};
+
+template<> struct _TIMChReg<2> : TIM_TypeDef
+{
+    volatile uint32_t& CCR() { return CCR2; }
+    volatile uint32_t& CCMR() { return CCMR1; }
+};
+
+template<> struct _TIMChReg<3> : TIM_TypeDef
+{
+    volatile uint32_t& CCR() { return CCR3; }
+    volatile uint32_t& CCMR() { return CCMR2; }
+};
+
+template<> struct _TIMChReg<4> : TIM_TypeDef
+{
+    volatile uint32_t& CCR() { return CCR4; }
+    volatile uint32_t& CCMR() { return CCMR2; }
+};
+
+template<> struct _TIMChReg<5> : TIM_TypeDef
+{
+    volatile uint32_t& CCR() { return CCR5; }
+    volatile uint32_t& CCMR() { return CCMR3; }
+};
+
+template<> struct _TIMChReg<6> : TIM_TypeDef
+{
+    volatile uint32_t& CCR() { return CCR6; }
+    volatile uint32_t& CCMR() { return CCMR3; }
+};

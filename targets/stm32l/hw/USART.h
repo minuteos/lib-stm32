@@ -200,7 +200,7 @@ struct USART : USART_TypeDef
 
 };
 
-template<unsigned n, unsigned apb, uint32_t enmask>
+template<unsigned n>
 struct _USART : USART
 {
     static const GPIOPinTable_t afClk, afTx, afRx, afCts, afRts;
@@ -209,21 +209,7 @@ struct _USART : USART
     constexpr unsigned Index() const { return n - 1; }
 
     //! Enables peripheral clock
-    void EnableClock()
-    {
-        if constexpr (apb == 1)
-        {
-            RCC->APB1ENR1 |= enmask;
-        }
-        else if constexpr (apb == 2)
-        {
-            RCC->APB2ENR |= enmask;
-        }
-        else
-        {
-            static_assert(false, "USART APB not 1/2? Or the compiler doesn't handle constexpr correctly.");
-        }
-    }
+    void EnableClock() const;
 
     void ConfigureClk(GPIOPin pin, GPIOPin::Mode mode = GPIOPin::SpeedMedium)
         { pin.ConfigureAlternate(afClk, mode); }
@@ -241,33 +227,39 @@ struct _USART : USART
 };
 
 #undef USART1
-using USART1_t = _USART<1, 2, RCC_APB2ENR_USART1EN>;
+using USART1_t = _USART<1>;
 #define USART1  CM_PERIPHERAL(USART1_t, USART1_BASE)
 
+template<> inline void USART1_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_USART1EN; }
 template<> inline DMAChannel* USART1_t::DmaRx() const { return DMA::ClaimChannel({ 0, 5, 2 }, { 1, 7, 2 }); }
 template<> inline DMAChannel* USART1_t::DmaTx() const { return DMA::ClaimChannel({ 0, 4, 2 }, { 1, 6, 2 }); }
 
 #undef USART2
-using USART2_t = _USART<2, 1, RCC_APB1ENR1_USART2EN>;
+using USART2_t = _USART<2>;
 #define USART2  CM_PERIPHERAL(USART2_t, USART2_BASE)
 
+template<> inline void USART2_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_USART2EN; }
 template<> inline DMAChannel* USART2_t::DmaRx() const { return DMA::ClaimChannel({ 0, 6, 2 }); }
 template<> inline DMAChannel* USART2_t::DmaTx() const { return DMA::ClaimChannel({ 0, 7, 2 }); }
 
 #undef USART3
-using USART3_t = _USART<3, 1, RCC_APB1ENR1_USART3EN>;
+using USART3_t = _USART<3>;
 #define USART3  CM_PERIPHERAL(USART3_t, USART3_BASE)
 
+template<> inline void USART3_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_USART3EN; }
 template<> inline DMAChannel* USART3_t::DmaRx() const { return DMA::ClaimChannel({ 0, 3, 2 }); }
 template<> inline DMAChannel* USART3_t::DmaTx() const { return DMA::ClaimChannel({ 0, 2, 2 }); }
 
 #undef UART4
-using UART4_t = _USART<4, 1, RCC_APB1ENR1_UART4EN>;
+using UART4_t = _USART<4>;
 #define UART4   CM_PERIPHERAL(UART4_t, UART4_BASE)
 
+template<> inline void UART4_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_UART4EN; }
 template<> inline DMAChannel* UART4_t::DmaRx() const { return DMA::ClaimChannel({ 1, 5, 2 }); }
 template<> inline DMAChannel* UART4_t::DmaTx() const { return DMA::ClaimChannel({ 1, 3, 2 }); }
 
 #undef UART5
-using UART5_t = _USART<5, 1, RCC_APB1ENR1_UART5EN>;
+using UART5_t = _USART<5>;
 #define UART5   CM_PERIPHERAL(UART5_t, USART5_BASE)
+
+template<> inline void UART5_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_UART5EN; }
