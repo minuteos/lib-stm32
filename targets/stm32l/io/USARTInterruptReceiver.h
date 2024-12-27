@@ -13,7 +13,9 @@
 
 #pragma once
 
-#include <io/io.h>
+#include <io/Receiver.h>
+
+#include "USARTInterrupt.h"
 
 namespace io
 {

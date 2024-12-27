@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <io/io.h>
+#include <io/Receiver.h>
 
 #include <hw/DMA.h>
 

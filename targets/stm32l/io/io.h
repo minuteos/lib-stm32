@@ -18,3 +18,8 @@
 #include <io/USARTInterrupt.h>
 #include <io/USARTInterruptReceiver.h>
 #include <io/USARTInterruptTransmitter.h>
+
+#include <io/USARTReceiver.h>
+#include <io/USARTTransmitter.h>
+
+#include <io/USARTDuplexPipe.h>

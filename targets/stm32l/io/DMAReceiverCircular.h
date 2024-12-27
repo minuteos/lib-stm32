@@ -46,4 +46,11 @@ private:
     char* r;
 };
 
+inline DMAReceiverCircular* CreateDMAReceiverCircularWithBuffer(DMAChannel& dma, const volatile void* source, size_t bufferSize, DMADescriptor::Flags flags = {})
+{
+    char* mem = new char[sizeof(DMAReceiverCircular) + bufferSize];
+    Buffer buf(mem + sizeof(DMAReceiverCircular), bufferSize);
+    return new(mem) DMAReceiverCircular(dma, source, buf, flags);
+}
+
 }
