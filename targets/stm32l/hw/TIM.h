@@ -64,6 +64,8 @@ struct _TIMChannel : _TIMChReg<n>
     static const GPIOPinTable_t afPin;
     static const GPIOPinTable_t afNeg;
 
+    //! Gets the timer to which this channel belongs
+    constexpr _TIM<ntim>& Timer() const { return *(_TIM<ntim>*)this; }
     //! Gets the zero-based index of the channel
     constexpr unsigned Index() const { return n - 1; }
 
