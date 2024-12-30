@@ -115,7 +115,7 @@ struct _TIM : TIM
 using TIM1_t = _TIM<1>;
 #define TIM1    CM_PERIPHERAL(TIM1_t, TIM1_BASE)
 
-template<> ALWAYS_INLINE void TIM1_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM1EN; }
+template<> ALWAYS_INLINE void TIM1_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM1EN; __DSB(); }
 
 #endif
 
@@ -124,7 +124,7 @@ template<> ALWAYS_INLINE void TIM1_t::EnableClock() const { RCC->APB2ENR |= RCC_
 using TIM2_t = _TIM<2>;
 #define TIM2    CM_PERIPHERAL(TIM2_t, TIM2_BASE)
 
-template<> ALWAYS_INLINE void TIM2_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN; }
+template<> ALWAYS_INLINE void TIM2_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN; __DSB(); }
 
 #endif
 
@@ -133,7 +133,7 @@ template<> ALWAYS_INLINE void TIM2_t::EnableClock() const { RCC->APB1ENR1 |= RCC
 using TIM3_t = _TIM<3>;
 #define TIM3    CM_PERIPHERAL(TIM3_t, TIM3_BASE)
 
-template<> ALWAYS_INLINE void TIM3_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM3EN; }
+template<> ALWAYS_INLINE void TIM3_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM3EN; __DSB(); }
 
 #endif
 
@@ -142,7 +142,7 @@ template<> ALWAYS_INLINE void TIM3_t::EnableClock() const { RCC->APB1ENR1 |= RCC
 using TIM4_t = _TIM<4>;
 #define TIM4    CM_PERIPHERAL(TIM4_t, TIM4_BASE)
 
-template<> ALWAYS_INLINE void TIM4_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM4EN; }
+template<> ALWAYS_INLINE void TIM4_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM4EN; __DSB(); }
 
 #endif
 
@@ -151,7 +151,7 @@ template<> ALWAYS_INLINE void TIM4_t::EnableClock() const { RCC->APB1ENR1 |= RCC
 using TIM5_t = _TIM<5>;
 #define TIM5    CM_PERIPHERAL(TIM5_t, TIM5_BASE)
 
-template<> ALWAYS_INLINE void TIM5_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM5EN; }
+template<> ALWAYS_INLINE void TIM5_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM5EN; __DSB(); }
 
 #endif
 
@@ -160,7 +160,7 @@ template<> ALWAYS_INLINE void TIM5_t::EnableClock() const { RCC->APB1ENR1 |= RCC
 using TIM6_t = _TIM<6>;
 #define TIM6    CM_PERIPHERAL(TIM6_t, TIM6_BASE)
 
-template<> ALWAYS_INLINE void TIM6_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM6EN; }
+template<> ALWAYS_INLINE void TIM6_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM6EN; __DSB(); }
 
 #endif
 
@@ -169,7 +169,7 @@ template<> ALWAYS_INLINE void TIM6_t::EnableClock() const { RCC->APB1ENR1 |= RCC
 using TIM7_t = _TIM<7>;
 #define TIM7    CM_PERIPHERAL(TIM7_t, TIM7_BASE)
 
-template<> ALWAYS_INLINE void TIM7_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM7EN; }
+template<> ALWAYS_INLINE void TIM7_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM7EN; __DSB(); }
 
 #endif
 
@@ -178,7 +178,7 @@ template<> ALWAYS_INLINE void TIM7_t::EnableClock() const { RCC->APB1ENR1 |= RCC
 using TIM8_t = _TIM<8>;
 #define TIM8    CM_PERIPHERAL(TIM8_t, TIM8_BASE)
 
-template<> ALWAYS_INLINE void TIM8_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM8EN; }
+template<> ALWAYS_INLINE void TIM8_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM8EN; __DSB(); }
 
 #endif
 
@@ -187,7 +187,7 @@ template<> ALWAYS_INLINE void TIM8_t::EnableClock() const { RCC->APB2ENR |= RCC_
 using TIM15_t = _TIM<15>;
 #define TIM15    CM_PERIPHERAL(TIM15_t, TIM15_BASE)
 
-template<> ALWAYS_INLINE void TIM15_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM15EN; }
+template<> ALWAYS_INLINE void TIM15_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM15EN; __DSB(); }
 
 #endif
 
@@ -196,7 +196,7 @@ template<> ALWAYS_INLINE void TIM15_t::EnableClock() const { RCC->APB2ENR |= RCC
 using TIM16_t = _TIM<16>;
 #define TIM16    CM_PERIPHERAL(TIM16_t, TIM16_BASE)
 
-template<> ALWAYS_INLINE void TIM16_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM16EN; }
+template<> ALWAYS_INLINE void TIM16_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM16EN; __DSB(); }
 
 #endif
 
@@ -205,7 +205,7 @@ template<> ALWAYS_INLINE void TIM16_t::EnableClock() const { RCC->APB2ENR |= RCC
 using TIM17_t = _TIM<17>;
 #define TIM17    CM_PERIPHERAL(TIM17_t, TIM17_BASE)
 
-template<> ALWAYS_INLINE void TIM17_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM17EN; }
+template<> ALWAYS_INLINE void TIM17_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM17EN; __DSB(); }
 
 #endif
 

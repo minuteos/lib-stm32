@@ -69,6 +69,7 @@ void GPIOPort::Configure(uint32_t mask, GPIOPin::Mode mode)
 
     // enable the corresponding peripheral
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN << Index();
+    __DSB();
 
     bool trace = _Trace();
 

@@ -19,11 +19,13 @@ struct _RCC : RCC_TypeDef
     {
         ASSERT(index < 3);
         APB1ENR1 |= RCC_APB1ENR1_I2C1EN << index;
+        __DSB();
     }
 
     void EnableDMA(unsigned index)
     {
         ASSERT(index < 2);
         AHB1ENR |= RCC_AHB1ENR_DMA1EN << index;
+        __DSB();
     }
 };

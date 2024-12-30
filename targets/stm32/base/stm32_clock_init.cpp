@@ -12,6 +12,7 @@ void _stm32_clock_init()
 {
     // enable PWR
     RCC->APB1ENR1 |= RCC_APB1ENR1_PWREN;
+    __DSB();
     // enable RTC write access
     PWR->CR1 |= PWR_CR1_DBP;
 
