@@ -13,11 +13,11 @@
 
 struct TIM : TIM_TypeDef
 {
-    uint32_t Count() const { return CNT; }
-    void Count(uint32_t count) { CNT = count; }
+    ALWAYS_INLINE uint32_t Count() const { return CNT; }
+    ALWAYS_INLINE void Count(uint32_t count) { CNT = count; }
 
-    void Enable() { CR1 |= TIM_CR1_CEN; }
-    void Disable() { CR1 &= ~TIM_CR1_CEN; }
+    ALWAYS_INLINE void Enable() { CR1 |= TIM_CR1_CEN; }
+    ALWAYS_INLINE void Disable() { CR1 &= ~TIM_CR1_CEN; }
 
     enum struct OCMode
     {
@@ -65,26 +65,26 @@ struct _TIMChannel : _TIMChReg<n>
     static const GPIOPinTable_t afNeg;
 
     //! Gets the timer to which this channel belongs
-    constexpr _TIM<ntim>& Timer() const { return *(_TIM<ntim>*)this; }
+    ALWAYS_INLINE constexpr _TIM<ntim>& Timer() const { return *(_TIM<ntim>*)this; }
     //! Gets the zero-based index of the channel
-    constexpr unsigned Index() const { return n - 1; }
+    ALWAYS_INLINE constexpr unsigned Index() const { return n - 1; }
 
     static constexpr unsigned CCMR_OFFSET = ((n - 1) & 1) << 3;
     static constexpr uint32_t CCMR_MASK = 0xFF00FF << CCMR_OFFSET;
     static constexpr unsigned CCER_OFFSET = (n - 1) << 2;
     static constexpr uint32_t CCER_MASK = 3 << CCER_OFFSET;
 
-    void OutputCompare(TIM::OCMode mode) { MODMASK(this->CCMR(), CCMR_MASK, uint32_t(mode) << CCMR_OFFSET); }
-    void CompareValue(uint32_t compare) { this->CCR() = compare; }
-    void OutputCompare(TIM::OCMode mode, uint32_t compare) { OutputCompare(mode); CompareValue(compare); }
-    void OutputEnable(bool invert = false, bool enable = true) { MODMASK(this->CCER, CCER_MASK, (enable * TIM_CCER_CC1E | invert * TIM_CCER_CC1P) << CCER_OFFSET); }
-    void ComplementaryEnable(bool invert = true, bool enable = true) { MODMASK(this->CCER, CCER_MASK << 2, (enable * TIM_CCER_CC1E | invert * TIM_CCER_CC1P) << CCER_OFFSET << 2); }
-    void OutputDisable() { OutputEnable(false, false); }
-    void ComplementaryDisable() { OutputEnable(false, false); }
+    ALWAYS_INLINE void OutputCompare(TIM::OCMode mode) { MODMASK(this->CCMR(), CCMR_MASK, uint32_t(mode) << CCMR_OFFSET); }
+    ALWAYS_INLINE void CompareValue(uint32_t compare) { this->CCR() = compare; }
+    ALWAYS_INLINE void OutputCompare(TIM::OCMode mode, uint32_t compare) { OutputCompare(mode); CompareValue(compare); }
+    ALWAYS_INLINE void OutputEnable(bool invert = false, bool enable = true) { MODMASK(this->CCER, CCER_MASK, (enable * TIM_CCER_CC1E | invert * TIM_CCER_CC1P) << CCER_OFFSET); }
+    ALWAYS_INLINE void ComplementaryEnable(bool invert = true, bool enable = true) { MODMASK(this->CCER, CCER_MASK << 2, (enable * TIM_CCER_CC1E | invert * TIM_CCER_CC1P) << CCER_OFFSET << 2); }
+    ALWAYS_INLINE void OutputDisable() { OutputEnable(false, false); }
+    ALWAYS_INLINE void ComplementaryDisable() { OutputEnable(false, false); }
 
-    void ConfigureOutput(GPIOPin pin, GPIOPin::Mode mode = GPIOPin::SpeedMedium)
+    ALWAYS_INLINE void ConfigureOutput(GPIOPin pin, GPIOPin::Mode mode = GPIOPin::SpeedMedium)
         { pin.ConfigureAlternate(afPin, mode); }
-    void ConfigureComplementary(GPIOPin pin, GPIOPin::Mode mode = GPIOPin::SpeedMedium)
+    ALWAYS_INLINE void ConfigureComplementary(GPIOPin pin, GPIOPin::Mode mode = GPIOPin::SpeedMedium)
         { pin.ConfigureAlternate(afNeg, mode); }
 };
 
@@ -97,17 +97,17 @@ struct _TIM : TIM
     void EnableClock() const;
 
     //! Gets the zero-based index of the peripheral
-    constexpr unsigned Index() const { return n - 1; }
+    ALWAYS_INLINE constexpr unsigned Index() const { return n - 1; }
 
     using TIM_t = _TIM;
 
-    template<unsigned ch> _TIMChannel<n, ch>& CH() { return *(_TIMChannel<n, ch>*)this; }
-    constexpr auto& CH1() { return CH<1>(); }
-    constexpr auto& CH2() { return CH<2>(); }
-    constexpr auto& CH3() { return CH<3>(); }
-    constexpr auto& CH4() { return CH<4>(); }
-    constexpr auto& CH5() { return CH<5>(); }
-    constexpr auto& CH6() { return CH<6>(); }
+    template<unsigned ch> ALWAYS_INLINE constexpr _TIMChannel<n, ch>& CH() { return *(_TIMChannel<n, ch>*)this; }
+    ALWAYS_INLINE constexpr auto& CH1() { return CH<1>(); }
+    ALWAYS_INLINE constexpr auto& CH2() { return CH<2>(); }
+    ALWAYS_INLINE constexpr auto& CH3() { return CH<3>(); }
+    ALWAYS_INLINE constexpr auto& CH4() { return CH<4>(); }
+    ALWAYS_INLINE constexpr auto& CH5() { return CH<5>(); }
+    ALWAYS_INLINE constexpr auto& CH6() { return CH<6>(); }
 };
 
 #ifdef TIM1
@@ -115,7 +115,7 @@ struct _TIM : TIM
 using TIM1_t = _TIM<1>;
 #define TIM1    CM_PERIPHERAL(TIM1_t, TIM1_BASE)
 
-template<> inline void TIM1_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM1EN; }
+template<> ALWAYS_INLINE void TIM1_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM1EN; }
 
 #endif
 
@@ -124,7 +124,7 @@ template<> inline void TIM1_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR
 using TIM2_t = _TIM<2>;
 #define TIM2    CM_PERIPHERAL(TIM2_t, TIM2_BASE)
 
-template<> inline void TIM2_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN; }
+template<> ALWAYS_INLINE void TIM2_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN; }
 
 #endif
 
@@ -133,7 +133,7 @@ template<> inline void TIM2_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1EN
 using TIM3_t = _TIM<3>;
 #define TIM3    CM_PERIPHERAL(TIM3_t, TIM3_BASE)
 
-template<> inline void TIM3_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM3EN; }
+template<> ALWAYS_INLINE void TIM3_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM3EN; }
 
 #endif
 
@@ -142,7 +142,7 @@ template<> inline void TIM3_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1EN
 using TIM4_t = _TIM<4>;
 #define TIM4    CM_PERIPHERAL(TIM4_t, TIM4_BASE)
 
-template<> inline void TIM4_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM4EN; }
+template<> ALWAYS_INLINE void TIM4_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM4EN; }
 
 #endif
 
@@ -151,7 +151,7 @@ template<> inline void TIM4_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1EN
 using TIM5_t = _TIM<5>;
 #define TIM5    CM_PERIPHERAL(TIM5_t, TIM5_BASE)
 
-template<> inline void TIM5_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM5EN; }
+template<> ALWAYS_INLINE void TIM5_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM5EN; }
 
 #endif
 
@@ -160,7 +160,7 @@ template<> inline void TIM5_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1EN
 using TIM6_t = _TIM<6>;
 #define TIM6    CM_PERIPHERAL(TIM6_t, TIM6_BASE)
 
-template<> inline void TIM6_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM6EN; }
+template<> ALWAYS_INLINE void TIM6_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM6EN; }
 
 #endif
 
@@ -169,7 +169,7 @@ template<> inline void TIM6_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1EN
 using TIM7_t = _TIM<7>;
 #define TIM7    CM_PERIPHERAL(TIM7_t, TIM7_BASE)
 
-template<> inline void TIM7_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM7EN; }
+template<> ALWAYS_INLINE void TIM7_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM7EN; }
 
 #endif
 
@@ -178,7 +178,7 @@ template<> inline void TIM7_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1EN
 using TIM8_t = _TIM<8>;
 #define TIM8    CM_PERIPHERAL(TIM8_t, TIM8_BASE)
 
-template<> inline void TIM8_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM8EN; }
+template<> ALWAYS_INLINE void TIM8_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM8EN; }
 
 #endif
 
@@ -187,7 +187,7 @@ template<> inline void TIM8_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR
 using TIM15_t = _TIM<15>;
 #define TIM15    CM_PERIPHERAL(TIM15_t, TIM15_BASE)
 
-template<> inline void TIM15_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM15EN; }
+template<> ALWAYS_INLINE void TIM15_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM15EN; }
 
 #endif
 
@@ -196,7 +196,7 @@ template<> inline void TIM15_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2EN
 using TIM16_t = _TIM<16>;
 #define TIM16    CM_PERIPHERAL(TIM16_t, TIM16_BASE)
 
-template<> inline void TIM16_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM16EN; }
+template<> ALWAYS_INLINE void TIM16_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM16EN; }
 
 #endif
 
@@ -205,7 +205,7 @@ template<> inline void TIM16_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2EN
 using TIM17_t = _TIM<17>;
 #define TIM17    CM_PERIPHERAL(TIM17_t, TIM17_BASE)
 
-template<> inline void TIM17_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM17EN; }
+template<> ALWAYS_INLINE void TIM17_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM17EN; }
 
 #endif
 

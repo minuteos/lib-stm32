@@ -91,19 +91,19 @@ struct DMAChannel : DMA_Channel_TypeDef
 {
     uint32_t : 32;  // reserved word, not included in DMA_Channel_TypeDef
 
-    struct DMA& DMA() const { return *(struct DMA*)((uint32_t)this & ~0xFF); }
+    ALWAYS_INLINE struct DMA& DMA() const { return *(struct DMA*)((uint32_t)this & ~0xFF); }
 
     //! Gets the zero-based channel Index
-    int Index() const { return (((uint32_t)this - DMA1_Channel1_BASE) & 0xFF) / sizeof(DMAChannel); }
+    ALWAYS_INLINE constexpr int Index() const { return (((uint32_t)this - DMA1_Channel1_BASE) & 0xFF) / sizeof(DMAChannel); }
 
     //! Enables the DMA channel
-    void Enable() { CCR |= DMA_CCR_EN; }
+    ALWAYS_INLINE void Enable() { CCR |= DMA_CCR_EN; }
     //! Disables the DMA channel
-    void Disable() { CCR &= ~DMA_CCR_EN; }
+    ALWAYS_INLINE void Disable() { CCR &= ~DMA_CCR_EN; }
     //! Returns true if the channel is enabled
-    bool IsEnabled() const { return CCR & DMA_CCR_EN; }
+    ALWAYS_INLINE bool IsEnabled() const { return CCR & DMA_CCR_EN; }
     //! Releases the channel (disables it and makes it available for other use)
-    void Release() { CCR = 0; }
+    ALWAYS_INLINE void Release() { CCR = 0; }
 
     //! Gets the IRQ for the current DMA channel
     class IRQ IRQ() const;
@@ -141,20 +141,20 @@ struct DMA : DMA_TypeDef
       __IO uint32_t CSELR;       /*!< DMA channel selection register              */
 
     //! Enables peripheral clock
-    void EnableClock() { RCC->EnableDMA(Index()); }
+    ALWAYS_INLINE void EnableClock() { RCC->EnableDMA(Index()); }
 
     //! Gets the zero-based index of the peripheral
-    unsigned Index() const { return (uintptr_t(this) >> 10) & 1; }
+    ALWAYS_INLINE constexpr unsigned Index() const { return (uintptr_t(this) >> 10) & 1; }
 
     //! Gets the specified channel
-    DMAChannel& Channel(unsigned channel) { channel--; ASSERT(channel < 7); return CH[channel]; }
+    ALWAYS_INLINE constexpr DMAChannel& Channel(unsigned channel) { channel--; ASSERT(channel < 7); return CH[channel]; }
 
-    template<typename ...Channels> void ClearInterrupts(Channels... channels)
+    template<typename ...Channels> ALWAYS_INLINE void ClearInterrupts(Channels... channels)
     {
         IFCR = ((0xF << ((channels - 1) << 2)) | ...);
     }
 
-    bool TransferComplete(unsigned channel) { channel--; ASSERT(channel < 7); return ISR & 2 << (channel << 2); }
+    ALWAYS_INLINE bool TransferComplete(unsigned channel) { channel--; ASSERT(channel < 7); return ISR & 2 << (channel << 2); }
 
 #if Ckernel
     ALWAYS_INLINE async_once(WaitForComplete, unsigned channel)
