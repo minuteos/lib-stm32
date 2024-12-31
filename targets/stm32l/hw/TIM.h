@@ -10,11 +10,15 @@
 
 #include <hw/RCC.h>
 #include <hw/GPIO.h>
+#include <hw/DMA.h>
 
 struct TIM : TIM_TypeDef
 {
     ALWAYS_INLINE uint32_t Count() const { return CNT; }
     ALWAYS_INLINE void Count(uint32_t count) { CNT = count; }
+
+    ALWAYS_INLINE uint32_t Reload() const { return ARR; }
+    ALWAYS_INLINE void Reload(uint32_t reload) { ARR = reload; }
 
     ALWAYS_INLINE void Enable() { CR1 |= TIM_CR1_CEN; }
     ALWAYS_INLINE void Disable() { CR1 &= ~TIM_CR1_CEN; }
@@ -68,6 +72,7 @@ struct _TIMChannel : _TIMChReg<n>
     ALWAYS_INLINE constexpr _TIM<ntim>& Timer() const { return *(_TIM<ntim>*)this; }
     //! Gets the zero-based index of the channel
     ALWAYS_INLINE constexpr unsigned Index() const { return n - 1; }
+    ALWAYS_INLINE DMAChannel* Dma() const { static_assert(false, "DMA not available for this channel"); return NULL; }
 
     static constexpr unsigned CCMR_OFFSET = ((n - 1) & 1) << 3;
     static constexpr uint32_t CCMR_MASK = 0xFF00FF << CCMR_OFFSET;
@@ -110,105 +115,6 @@ struct _TIM : TIM
     ALWAYS_INLINE constexpr auto& CH6() { return CH<6>(); }
 };
 
-#ifdef TIM1
-#undef TIM1
-using TIM1_t = _TIM<1>;
-#define TIM1    CM_PERIPHERAL(TIM1_t, TIM1_BASE)
-
-template<> ALWAYS_INLINE void TIM1_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM1EN; __DSB(); }
-
-#endif
-
-#ifdef TIM2
-#undef TIM2
-using TIM2_t = _TIM<2>;
-#define TIM2    CM_PERIPHERAL(TIM2_t, TIM2_BASE)
-
-template<> ALWAYS_INLINE void TIM2_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN; __DSB(); }
-
-#endif
-
-#ifdef TIM3
-#undef TIM3
-using TIM3_t = _TIM<3>;
-#define TIM3    CM_PERIPHERAL(TIM3_t, TIM3_BASE)
-
-template<> ALWAYS_INLINE void TIM3_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM3EN; __DSB(); }
-
-#endif
-
-#ifdef TIM4
-#undef TIM4
-using TIM4_t = _TIM<4>;
-#define TIM4    CM_PERIPHERAL(TIM4_t, TIM4_BASE)
-
-template<> ALWAYS_INLINE void TIM4_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM4EN; __DSB(); }
-
-#endif
-
-#ifdef TIM5
-#undef TIM5
-using TIM5_t = _TIM<5>;
-#define TIM5    CM_PERIPHERAL(TIM5_t, TIM5_BASE)
-
-template<> ALWAYS_INLINE void TIM5_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM5EN; __DSB(); }
-
-#endif
-
-#ifdef TIM6
-#undef TIM6
-using TIM6_t = _TIM<6>;
-#define TIM6    CM_PERIPHERAL(TIM6_t, TIM6_BASE)
-
-template<> ALWAYS_INLINE void TIM6_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM6EN; __DSB(); }
-
-#endif
-
-#ifdef TIM7
-#undef TIM7
-using TIM7_t = _TIM<7>;
-#define TIM7    CM_PERIPHERAL(TIM7_t, TIM7_BASE)
-
-template<> ALWAYS_INLINE void TIM7_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM7EN; __DSB(); }
-
-#endif
-
-#ifdef TIM8
-#undef TIM8
-using TIM8_t = _TIM<8>;
-#define TIM8    CM_PERIPHERAL(TIM8_t, TIM8_BASE)
-
-template<> ALWAYS_INLINE void TIM8_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM8EN; __DSB(); }
-
-#endif
-
-#ifdef TIM15
-#undef TIM15
-using TIM15_t = _TIM<15>;
-#define TIM15    CM_PERIPHERAL(TIM15_t, TIM15_BASE)
-
-template<> ALWAYS_INLINE void TIM15_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM15EN; __DSB(); }
-
-#endif
-
-#ifdef TIM16
-#undef TIM16
-using TIM16_t = _TIM<16>;
-#define TIM16    CM_PERIPHERAL(TIM16_t, TIM16_BASE)
-
-template<> ALWAYS_INLINE void TIM16_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM16EN; __DSB(); }
-
-#endif
-
-#ifdef TIM17
-#undef TIM17
-using TIM17_t = _TIM<17>;
-#define TIM17    CM_PERIPHERAL(TIM17_t, TIM17_BASE)
-
-template<> ALWAYS_INLINE void TIM17_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM17EN; __DSB(); }
-
-#endif
-
 template<> struct _TIMChReg<1> : TIM_TypeDef
 {
     volatile uint32_t& CCR() { return CCR1; }
@@ -244,3 +150,136 @@ template<> struct _TIMChReg<6> : TIM_TypeDef
     volatile uint32_t& CCR() { return CCR6; }
     volatile uint32_t& CCMR() { return CCMR3; }
 };
+
+#ifdef TIM1
+#undef TIM1
+using TIM1_t = _TIM<1>;
+#define TIM1    CM_PERIPHERAL(TIM1_t, TIM1_BASE)
+
+template<> ALWAYS_INLINE void TIM1_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM1EN; __DSB(); }
+
+template<> inline DMAChannel* _TIMChannel<1, 1>::Dma() const { return DMA::ClaimChannel({ 0, 2, 7 }); }
+template<> inline DMAChannel* _TIMChannel<1, 2>::Dma() const { return DMA::ClaimChannel({ 0, 3, 7 }); }
+template<> inline DMAChannel* _TIMChannel<1, 3>::Dma() const { return DMA::ClaimChannel({ 0, 7, 7 }); }
+template<> inline DMAChannel* _TIMChannel<1, 4>::Dma() const { return DMA::ClaimChannel({ 0, 4, 7 }); }
+
+#endif
+
+#ifdef TIM2
+#undef TIM2
+using TIM2_t = _TIM<2>;
+#define TIM2    CM_PERIPHERAL(TIM2_t, TIM2_BASE)
+
+template<> ALWAYS_INLINE void TIM2_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN; __DSB(); }
+
+template<> inline DMAChannel* _TIMChannel<2, 1>::Dma() const { return DMA::ClaimChannel({ 0, 5, 4 }); }
+template<> inline DMAChannel* _TIMChannel<2, 2>::Dma() const { return DMA::ClaimChannel({ 0, 7, 4 }); }
+template<> inline DMAChannel* _TIMChannel<2, 3>::Dma() const { return DMA::ClaimChannel({ 0, 1, 4 }); }
+template<> inline DMAChannel* _TIMChannel<2, 4>::Dma() const { return DMA::ClaimChannel({ 0, 7, 4 }); }
+
+#endif
+
+#ifdef TIM3
+#undef TIM3
+using TIM3_t = _TIM<3>;
+#define TIM3    CM_PERIPHERAL(TIM3_t, TIM3_BASE)
+
+template<> ALWAYS_INLINE void TIM3_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM3EN; __DSB(); }
+
+template<> inline DMAChannel* _TIMChannel<3, 1>::Dma() const { return DMA::ClaimChannel({ 0, 6, 5 }); }
+template<> inline DMAChannel* _TIMChannel<3, 3>::Dma() const { return DMA::ClaimChannel({ 0, 2, 5 }); }
+template<> inline DMAChannel* _TIMChannel<3, 4>::Dma() const { return DMA::ClaimChannel({ 0, 3, 5 }); }
+
+#endif
+
+#ifdef TIM4
+#undef TIM4
+using TIM4_t = _TIM<4>;
+#define TIM4    CM_PERIPHERAL(TIM4_t, TIM4_BASE)
+
+template<> ALWAYS_INLINE void TIM4_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM4EN; __DSB(); }
+
+template<> inline DMAChannel* _TIMChannel<4, 1>::Dma() const { return DMA::ClaimChannel({ 0, 1, 6 }); }
+template<> inline DMAChannel* _TIMChannel<4, 2>::Dma() const { return DMA::ClaimChannel({ 0, 4, 6 }); }
+template<> inline DMAChannel* _TIMChannel<4, 3>::Dma() const { return DMA::ClaimChannel({ 0, 5, 6 }); }
+
+#endif
+
+#ifdef TIM5
+#undef TIM5
+using TIM5_t = _TIM<5>;
+#define TIM5    CM_PERIPHERAL(TIM5_t, TIM5_BASE)
+
+template<> ALWAYS_INLINE void TIM5_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM5EN; __DSB(); }
+
+template<> inline DMAChannel* _TIMChannel<5, 1>::Dma() const { return DMA::ClaimChannel({ 1, 5, 5 }); }
+template<> inline DMAChannel* _TIMChannel<5, 2>::Dma() const { return DMA::ClaimChannel({ 1, 4, 5 }); }
+template<> inline DMAChannel* _TIMChannel<5, 3>::Dma() const { return DMA::ClaimChannel({ 1, 2, 5 }); }
+template<> inline DMAChannel* _TIMChannel<5, 4>::Dma() const { return DMA::ClaimChannel({ 1, 1, 5 }); }
+
+#endif
+
+#ifdef TIM6
+#undef TIM6
+using TIM6_t = _TIM<6>;
+#define TIM6    CM_PERIPHERAL(TIM6_t, TIM6_BASE)
+
+template<> ALWAYS_INLINE void TIM6_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM6EN; __DSB(); }
+
+#endif
+
+#ifdef TIM7
+#undef TIM7
+using TIM7_t = _TIM<7>;
+#define TIM7    CM_PERIPHERAL(TIM7_t, TIM7_BASE)
+
+template<> ALWAYS_INLINE void TIM7_t::EnableClock() const { RCC->APB1ENR1 |= RCC_APB1ENR1_TIM7EN; __DSB(); }
+
+#endif
+
+#ifdef TIM8
+#undef TIM8
+using TIM8_t = _TIM<8>;
+#define TIM8    CM_PERIPHERAL(TIM8_t, TIM8_BASE)
+
+template<> ALWAYS_INLINE void TIM8_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM8EN; __DSB(); }
+
+template<> inline DMAChannel* _TIMChannel<8, 1>::Dma() const { return DMA::ClaimChannel({ 1, 6, 7 }); }
+template<> inline DMAChannel* _TIMChannel<8, 2>::Dma() const { return DMA::ClaimChannel({ 1, 7, 7 }); }
+template<> inline DMAChannel* _TIMChannel<8, 3>::Dma() const { return DMA::ClaimChannel({ 1, 1, 7 }); }
+template<> inline DMAChannel* _TIMChannel<8, 4>::Dma() const { return DMA::ClaimChannel({ 1, 2, 7 }); }
+
+#endif
+
+#ifdef TIM15
+#undef TIM15
+using TIM15_t = _TIM<15>;
+#define TIM15    CM_PERIPHERAL(TIM15_t, TIM15_BASE)
+
+template<> ALWAYS_INLINE void TIM15_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM15EN; __DSB(); }
+
+template<> inline DMAChannel* _TIMChannel<15, 1>::Dma() const { return DMA::ClaimChannel({ 0, 5, 7 }); }
+
+#endif
+
+#ifdef TIM16
+#undef TIM16
+using TIM16_t = _TIM<16>;
+#define TIM16    CM_PERIPHERAL(TIM16_t, TIM16_BASE)
+
+template<> ALWAYS_INLINE void TIM16_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM16EN; __DSB(); }
+
+template<> inline DMAChannel* _TIMChannel<16, 1>::Dma() const { return DMA::ClaimChannel({ 0, 3, 4 }, { 0, 6, 4 }); }
+
+#endif
+
+#ifdef TIM17
+#undef TIM17
+using TIM17_t = _TIM<17>;
+#define TIM17    CM_PERIPHERAL(TIM17_t, TIM17_BASE)
+
+template<> ALWAYS_INLINE void TIM17_t::EnableClock() const { RCC->APB2ENR |= RCC_APB2ENR_TIM17EN; __DSB(); }
+
+template<> inline DMAChannel* _TIMChannel<17, 1>::Dma() const { return DMA::ClaimChannel({ 0, 1, 5 }, { 0, 7, 5 }); }
+
+#endif
