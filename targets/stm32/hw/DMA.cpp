@@ -139,6 +139,7 @@ void DMAChannel::LinkHandler()
         link.CNDTR0 = CNDTR = link.CNDTR;
         CPAR = link.CPAR;
         CMAR = link.CMAR;
+        __DMB();    // make sure the other registers are written before re-enabling DMA
         CCR = link.CCR;
         link.CCR = 0;
     }

@@ -212,6 +212,7 @@ async_def(
         ASSERT(data < end)
         auto b = data < end ? *data++ : 0;
         *reg = b;
+        __DSB();    // make sure the write is completed, otherwise the interrupt may get re-triggered
     }
 )
 {
