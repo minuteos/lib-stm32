@@ -8,6 +8,8 @@
 
 #include "DMA.h"
 
+#define MYDBG(...)  DBGCL("DMA", __VA_ARGS__)
+
 DMAChannel* DMA::ClaimChannel(uint32_t specs)
 {
     while (specs)
@@ -22,11 +24,13 @@ DMAChannel* DMA::ClaimChannel(uint32_t specs)
             dma->EnableClock();
             MODMASK(dma->CSELR, MASK(4) << off, spec.map << off);
             ch.CCR = DMA_CCR_MEM2MEM;
+            MYDBG("DMA %d channel %d claimed for function %d", spec.dma + 1, spec.ch, spec.map);
             return &ch;
         }
         specs >>= 8;
     }
 
+    MYDBG("WARNING! Failed to claim a DMA channel");
     return NULL;
 }
 

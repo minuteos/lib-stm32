@@ -105,6 +105,20 @@ struct DMAChannel : DMA_Channel_TypeDef
     //! Releases the channel (disables it and makes it available for other use)
     ALWAYS_INLINE void Release() { CCR = 0; }
 
+    //! Calculates the interrupt flag mask for this channel
+    ALWAYS_INLINE constexpr uint32_t InterruptMask() const { return 0xF << (Index() << 2); }
+    //! Clears the interrupt flags
+    ALWAYS_INLINE void ClearInterrupt();
+    //! Clears the interrupt flags and enables the channel
+    ALWAYS_INLINE void ClearAndEnable() { ClearInterrupt(); Enable(); }
+
+    //! Gets the transfer count for this channel
+    ALWAYS_INLINE uint32_t TransferCount() const { return CNDTR; }
+    //! Sets the transfer count for this channel
+    ALWAYS_INLINE void TransferCount(uint32_t count) { CNDTR = count; }
+    //! Sets the transfer source (memory pointer and count) for this channel
+    ALWAYS_INLINE void TransferSource(Span source) { CMAR = uint32_t(source.Pointer()); CNDTR = source.Length(); }
+
     //! Gets the IRQ for the current DMA channel
     class IRQ IRQ() const;
 
@@ -114,6 +128,9 @@ struct DMAChannel : DMA_Channel_TypeDef
     void Unlink();
     //! Retrieves the memory location where next transfer will take place
     const char* LinkPointer();
+
+    //! Gets the main descriptor
+    DMADescriptor& Descriptor() { return *(DMADescriptor*)this; }
 
 #if Ckernel
     ALWAYS_INLINE async_once(WaitForEnabled, bool state)
@@ -187,6 +204,8 @@ struct DMA : DMA_TypeDef
 private:
     static DMAChannel* ClaimChannel(uint32_t specs);
 };
+
+ALWAYS_INLINE void DMAChannel::ClearInterrupt() { DMA().IFCR = InterruptMask(); }
 
 #if Ckernel
 
