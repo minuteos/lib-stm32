@@ -11,7 +11,13 @@
 typedef uint32_t mono_t;
 
 #define MONO_CLOCKS _stm32_rtc_mono()
+
+#if STM32_RTC_FROM_HSE
+#define MONO_FREQUENCY (STM32_HSE_FREQUENCY / 32 / STM32_RTC_FROM_HSE)
+#else
 #define MONO_FREQUENCY 32768
+#endif
+
 #define MONO_US _stm32_rtc_us()
 
 #define PLATFORM_SLEEP(start, duration)
