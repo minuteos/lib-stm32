@@ -6,6 +6,8 @@
  * stm32l/hw/TIM.h
  */
 
+#pragma once
+
 #include <base/base.h>
 
 #include <hw/RCC.h>
