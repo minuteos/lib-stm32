@@ -102,6 +102,7 @@ void GPIOPort::Configure(uint32_t mask, GPIOPin::Mode mode)
     if (trace) _DBG(")\n");
 
     MODMASK(OTYPER, mask, mode & GPIOPin::OpenDrain ? mask : 0);
+    MODMASK(ASCR, mask, (mode & MASK(2)) == GPIOPin::Analog ? mask : 0);
 
     do
     {
