@@ -16,6 +16,8 @@ void _stm32_sysclk_init()
     MODMASK(PWR->CR1, PWR_CR1_VOS, PWR_CR1_VOS_0);
     // jump to maximum MSI clock for continued init
     MODMASK(RCC->CR, RCC_CR_MSIRANGE, RCC_CR_MSIRANGE_11 | RCC_CR_MSIRGSEL);
+    // set MSI as 48MHz clock (USB, SDMMC)
+    MODMASK(RCC->CCIPR, RCC_CCIPR_CLK48SEL, RCC_CCIPR_CLK48SEL_0 | RCC_CCIPR_CLK48SEL_1);
     SystemCoreClock = 48000000;
 
 #if STM32_HSE_FREQUENCY
