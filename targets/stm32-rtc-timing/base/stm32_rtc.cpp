@@ -8,6 +8,8 @@
 
 #include <base/base.h>
 
+#include <hw/RTC.h>
+
 void _stm32_rtc_init()
 {
     // enable PWR
@@ -44,9 +46,7 @@ void _stm32_rtc_init()
 #endif
     if (RTC->PRER != prer)
     {
-        // unlock RTC
-        RTC->WPR = 0xCA;
-        RTC->WPR = 0x53;
+        RTC->Unlock();
 
         // go to init mode
         RTC->ISR |= RTC_ISR_INIT;
@@ -58,26 +58,39 @@ void _stm32_rtc_init()
         // finish init
         RTC->ISR &= ~(RTC_ISR_INIT);
 
-        // lock RTC
-        RTC->WPR = 0;
+        RTC->Lock();
+    }
+
+    if (!(RTC->CR & RTC_CR_BYPSHAD))
+    {
+        // disable register shadowing - all we use is SSR
+        RTC->Unlock();
+        RTC->CR |= RTC_CR_BYPSHAD;
+        RTC->Lock();
     }
 
 #ifdef DEBUG
     // freeze RTC when debugging
     DBGMCU->APB1FZR1 |= DBGMCU_APB1FZR1_DBG_RTC_STOP;
+    // allow debugging in low power modes
+    DBGMCU->CR |= DBGMCU_CR_DBG_SLEEP | DBGMCU_CR_DBG_STOP;
 #endif
+
+    // enable EXTI18 (RTC ALARM)
+    EXTI->RTSR1 |= EXTI_RTSR1_RT18;
+    EXTI->EMR1 |= EXTI_EMR1_EM18;
 }
 
 CORTEX_PREINIT(!rtcinit, _stm32_rtc_init);
 
+static struct
+{
+    uint32_t last;
+    mono_t mono;
+} state = {};
+
 OPTIMIZE mono_t _stm32_rtc_mono()
 {
-    static struct
-    {
-        uint32_t last;
-        mono_t mono;
-    } state = {};
-
     auto val = RTC->SSR;
     auto s = state;
     if (auto elapsed = (s.last - val) & MASK(15))
@@ -105,4 +118,44 @@ OPTIMIZE mono_t _stm32_rtc_us()
         state.t64 = t64 += elapsed;
     }
     return (t64 * (((int64_t)1000000 << 32) / MONO_FREQUENCY)) >> 32;
+}
+
+OPTIMIZE void _stm32_rtc_setup_wake(mono_t wakeAt)
+{
+    RTC->Unlock();
+
+    while (!(RTC->ISR & RTC_ISR_ALRAWF));
+    RTC->ISR &= ~RTC_ISR_ALRAF;
+    // don't care about whole seconds
+    RTC->ALRMAR = RTC_ALRMAR_MSK1 | RTC_ALRMAR_MSK2 | RTC_ALRMAR_MSK3 | RTC_ALRMAR_MSK4;
+
+    // number of ticks to sleep
+    auto sleepTicks = wakeAt - state.mono;
+    // number of SSR ticks to sleep (cannot overflow)
+    auto ssrSleep = std::min(MASK(15), unsigned(sleepTicks));
+    // wake up when the fraction matches
+    auto wakeSsr = (state.last - ssrSleep) & MASK(15);
+    RTC->ALRMASSR = RTC_ALRMASSR_MASKSS | wakeSsr;
+    // enable the alarm
+    RTC->CR |= RTC_CR_ALRAE | RTC_CR_ALRAIE;
+    // if the alarm time is very close, trigger a wakeup event manually so it isn't missed
+    if (ssrSleep < MASK(14))
+    {
+        // the has overflowed
+        auto toGo = (wakeSsr - RTC->SSR + 1) & MASK(15);
+        if (toGo < 16)
+        {
+            // make sure an event is triggered
+            __SEV();
+        }
+    }
+
+    RTC->Lock();
+}
+
+OPTIMIZE void _stm32_rtc_clean_wake()
+{
+    RTC->Unlock();
+    RTC->CR &= ~(RTC_CR_ALRAE | RTC_CR_ALRAIE);
+    RTC->Lock();
 }

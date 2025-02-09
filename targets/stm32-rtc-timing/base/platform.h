@@ -20,9 +20,12 @@ typedef uint32_t mono_t;
 
 #define MONO_US _stm32_rtc_us()
 
-#define PLATFORM_SLEEP(start, duration)
+#define CORTEX_SCHEDULE_WAKEUP  _stm32_rtc_setup_wake
+#define CORTEX_CLEAN_WAKEUP  _stm32_rtc_clean_wake
 
 #include_next <base/platform.h>
 
 extern mono_t _stm32_rtc_mono();
 extern mono_t _stm32_rtc_us();
+extern void _stm32_rtc_setup_wake(mono_t instant);
+extern void _stm32_rtc_clean_wake();
