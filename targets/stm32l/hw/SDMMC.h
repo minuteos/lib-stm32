@@ -167,9 +167,11 @@ struct SDMMC : SDMMC_TypeDef
         constexpr int Year() const { return 2000 + (yearh << 4 | yearl); }
     };
 
-    CID ResultCid() { return *(const CID*)(const uint32_t[]){
-        FROM_BE32(RESP1), FROM_BE32(RESP2), FROM_BE32(RESP3), FROM_BE32(RESP4)
-    }; }
+    CID ResultCid()
+    {
+        union { uint32_t raw[4]; CID cid; } u = { {  FROM_BE32(RESP1), FROM_BE32(RESP2), FROM_BE32(RESP3), FROM_BE32(RESP4) } };
+        return u.cid;
+    }
 
     PACKED_UNALIGNED_STRUCT CSDv1
     {
@@ -323,9 +325,10 @@ struct SDMMC : SDMMC_TypeDef
         constexpr unsigned CapacityMB() const { return IsV2() ? v2.CapacityMB() : v1.CapacityMB(); }
     };
 
-    CSD ResultCsd() { return *(const CSD*)(const uint32_t[]){
-        FROM_BE32(RESP1), FROM_BE32(RESP2), FROM_BE32(RESP3), FROM_BE32(RESP4)
-    }; }
+    CSD ResultCsd() {
+        union { uint32_t raw[4]; CSD csd; } u = { {  FROM_BE32(RESP1), FROM_BE32(RESP2), FROM_BE32(RESP3), FROM_BE32(RESP4) } };
+        return u.csd;
+    }
 
     enum struct CardStatus
     {
@@ -343,7 +346,11 @@ struct SDMMC : SDMMC_TypeDef
         uint16_t rca;
     };
 
-    Rca ResultRca() { return *(const Rca*)(const uint32_t[]){ RESP1 }; }
+    Rca ResultRca()
+    {
+        union { uint32_t u; Rca r; } u = { RESP1 };
+        return u.r;
+    }
 
     #pragma endregion
 
