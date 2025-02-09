@@ -23,8 +23,10 @@ public:
 
     static void Register(SDMMC* sd);
 
-protected:
     virtual async(Init) final override;
+    async(Test);
+
+protected:
     virtual async(Read, void* buf, LBA_t sectorStart, size_t sectorCount) final override;
     virtual async(Write, const void* buf, LBA_t sectorStart, size_t sectorCount) final override;
     virtual async(IoCtl, uint8_t cmd, void* buff) final override;

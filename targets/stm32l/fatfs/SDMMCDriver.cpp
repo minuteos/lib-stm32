@@ -28,26 +28,56 @@ async_def(
     Timeout timeout;
 )
 {
-    Status(STA_NODISK | STA_NOINIT);
-
-    // enable SDMMC clock
-    RCC->APB2ENR |= RCC_APB2ENR_SDMMC1EN;
-
-    await(sd.Initialize);
-
-    Status(STA_NODISK);
-
-    if (await(sd.IdentifyCard, ci))
+    if (Status() & STA_NOINIT)
     {
-        addrMul = ci.blockAddressing ? 1 : FF_MAX_SS;
-        if (sd.Command_SelectCard(ci.rca.rca))
-        {
-            MYDBG("SD card ready");
-            Status(0);
-        }
+        // enable SDMMC clock, reset it
+        RCC->APB2RSTR |= RCC_APB2RSTR_SDMMC1RST;
+        RCC->APB2ENR |= RCC_APB2ENR_SDMMC1EN;
+        RCC->APB2RSTR &= ~RCC_APB2RSTR_SDMMC1RST;
+
+        await(sd.Initialize);
+
+        Status(STA_NODISK);
     }
 
-    async_return(Status());
+    if (Status() & STA_NODISK)
+    {
+        if (await(sd.IdentifyCard, ci))
+        {
+            addrMul = ci.blockAddressing ? 1 : FF_MAX_SS;
+            if (sd.Command_SelectCard(ci.rca.rca))
+            {
+                Status(0);
+                async_return(RES_OK);
+            }
+        }
+
+        Status(STA_NODISK | STA_NOINIT);
+        async_return(RES_ERROR);
+    }
+
+    async_return(RES_OK);
+}
+async_end
+
+async(SDMMCDriver::Test)
+async_def()
+{
+    if (!await(sd.WaitNotBusy, Timeout::Seconds(1)))
+    {
+        MYDBG("Timeout waiting for card to become available");
+        Status(STA_NODISK | STA_NOINIT);
+        async_return(RES_ERROR);
+    }
+
+    if (!sd.Command_SendStatus(ci.rca.rca))
+    {
+        MYDBG("Failed to get card status");
+        Status(STA_NODISK | STA_NOINIT);
+        async_return(RES_ERROR);
+    }
+
+    async_return(RES_OK);
 }
 async_end
 
@@ -179,7 +209,7 @@ async_def(
 async_end
 
 async(SDMMCDriver::IoCtl, uint8_t cmd, void* buff)
-async_def()
+async_def_sync()
 {
 }
 async_end
