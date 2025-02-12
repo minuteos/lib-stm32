@@ -141,7 +141,8 @@ struct DMAChannel : DMA_Channel_TypeDef
     async_end
 
     async_once(WaitForComplete);
-    //! Waits until the transfer pointer moves away from the specified
+    //! Waits until the transfer pointer moves away from the specified address
+    //! @warning Yields instead of waiting if the DMA is already stopped to avoid hanging
     async_once(LinkPointerNot, const char* p, Timeout timeout = Timeout::Infinite);
 #endif
 

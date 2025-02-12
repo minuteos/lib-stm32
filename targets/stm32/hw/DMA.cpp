@@ -66,7 +66,8 @@ static inline DMAChannelLink& GetLink(DMAChannel* ch)
 struct DMALinkStatus
 {
     char* end;
-    uint32_t cndtr;
+    uint16_t cndtr;
+    uint16_t cndtr0;
 };
 
 //! Gets the status of the currently active transfer started via buffers linking
@@ -76,15 +77,16 @@ static Packed<DMALinkStatus> GetStatus(DMAChannel* ch)
     ch->Disable();
 
     char* buf = (char*)ch->CMAR;
-    auto cndtr = ch->CNDTR;
-    buf += GetLink(ch).CNDTR0;
+    uint16_t cndtr = ch->CNDTR;
+    uint16_t cndtr0 = GetLink(ch).CNDTR0;
+    buf += cndtr0;
 
     if (wasEnabled)
     {
         ch->Enable();
     }
 
-    return pack(DMALinkStatus { buf, cndtr });
+    return pack(DMALinkStatus { buf, cndtr, cndtr0 });
 }
 
 size_t DMAChannel::TryLinkBuffer(Span buf)
@@ -163,7 +165,20 @@ async_once(DMAChannel::LinkPointerNot, const char* p, Timeout timeout)
 {
     auto s = unpack<DMALinkStatus>(GetStatus(this));
     uint32_t cndtr = s.end - p;
-    return async_forward(WaitMaskNot, CNDTR, ~0u, cndtr, timeout);
+    if (s.end - s.cndtr != p)
+    {
+        async_once_return(true);
+    }
+    if (cndtr)
+    {
+        return async_forward(WaitMaskNot, CNDTR, ~0u, cndtr, timeout);
+    }
+    else
+    {
+        // we cannot reliably wait for inactive DMA to change - just yield and try again
+        __pCallee.waitResult = {};
+        return _ASYNC_RES(0, AsyncResult::SleepTicks);
+    }
 }
 
 #endif
