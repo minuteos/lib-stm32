@@ -41,20 +41,21 @@ SDMMC::CommandResult SDMMC::Command(uint32_t cmd, uint32_t arg)
         if (!res) { return res; }
     }
 
-    ICR = SDMMC_STA_CMASK | SDMMC_STA_DMASK;
-    __DSB();
+    ASSERT(!(STA & SDMMC_STA_CMASK));
     ARG = arg;
     CMD = (cmd | SDMMC_CMD_CPSMEN) & 0xFFF;
     __DSB();
-    while (!(state = (STA & SDMMC_STA_CMASK)));
-    MYTRACE("%d %X %d %X = %X %X", !!(cmd & RespNoCmd), (cmd >> 6) & 0x3F, cmd & 0x3F, arg, STA, RESP1);
+    while ((state = STA) & SDMMC_STA_CMDACT);
+    MYTRACE("%d %X %d %X = %X %X", !!(cmd & RespNoCmd), (cmd >> 6) & 0x3F, cmd & 0x3F, arg, state, RESP1);
+    ASSERT(STA & SDMMC_STA_CMASK);
+    ICR = SDMMC_STA_CMASK;  // clear command status bits
 
     auto expectResp = ((cmd & SDMMC_CMD_WAITRESP) == RespShort) && !(cmd & RespNoCmd) ? cmd & SDMMC_CMD_CMDINDEX : 0x3F;
     if (RESPCMD != expectResp)
     {
         // RESPCMD mismatch, report as CRC failure
         MYTRACE("RESPCMD %d != %d", RESPCMD, expectResp);
-        return SDMMC_STA_CCRCFAIL;
+        return state | SDMMC_STA_CCRCFAIL;
     }
 
     if ((cmd & RespNoCRC) && (state & SDMMC_STA_CCRCFAIL))
@@ -64,6 +65,56 @@ SDMMC::CommandResult SDMMC::Command(uint32_t cmd, uint32_t arg)
     }
 
     return state;
+}
+
+void SDMMC::ConfigureDmaRead(DMAChannel& dma, Buffer buf)
+{
+    ASSERT(!dma.IsEnabled());
+    ASSERT(!(buf.Length() & 3));
+    ASSERT(!(STA & (SDMMC_STA_DMASK | SDMMC_STA_TXACT | SDMMC_STA_RXACT)));
+    dma.Descriptor() = DMADescriptor::Transfer(&FIFO, buf.Pointer(), buf.Length() >> 2,
+        DMADescriptor::IncrementMemory | DMADescriptor::P2M | DMADescriptor::UnitWord | DMADescriptor::PrioLow);
+    dma.ClearAndEnable();
+
+    DTIMER = 48000000;
+    DLEN = buf.Length();
+    Configure(DataTransferStart() | DataTransferDirection(true) | DataTransferDma() | DataTransferBlockSize(buf.Length()));
+}
+
+void SDMMC::ConfigureDmaWrite(DMAChannel& dma, Span buf)
+{
+    ASSERT(!dma.IsEnabled());
+    ASSERT(!(buf.Length() & 3));
+    ASSERT(!(STA & (SDMMC_STA_DMASK | SDMMC_STA_TXACT | SDMMC_STA_RXACT)));
+    dma.Descriptor() = DMADescriptor::Transfer(buf.Pointer(), &FIFO, buf.Length() >> 2,
+        DMADescriptor::IncrementMemory | DMADescriptor::M2P | DMADescriptor::UnitWord | DMADescriptor::PrioLow);
+    dma.ClearAndEnable();
+
+    DTIMER = 48000000;
+    DLEN = buf.Length();
+    Configure(DataTransferStart() | DataTransferDirection(false) | DataTransferDma() | DataTransferBlockSize(buf.Length()));
+}
+
+SDMMC::DataResult SDMMC::AbortDmaTransfer(DMAChannel& dma)
+{
+    Configure(DataTransferStart(false));
+    while (STA & (SDMMC_STA_TXACT | SDMMC_STA_RXACT));
+    dma.Disable();
+    dma.ClearInterrupt();
+    auto res = STA;
+    ICR = SDMMC_STA_DMASK;
+    return res;
+}
+
+SDMMC::DataResult SDMMC::CompleteDmaTransfer(DMAChannel& dma)
+{
+    dma.Disable();
+    ASSERT(dma.CNDTR == 0);
+    auto res = STA;
+    ASSERT(!(STA & (SDMMC_STA_TXACT | SDMMC_STA_RXACT)));
+    ASSERT(res & SDMMC_STA_DMASK);
+    ICR = SDMMC_STA_DMASK;
+    return res;
 }
 
 async(SDMMC::Initialize)
@@ -94,6 +145,8 @@ async_def(
     Timeout timeout;
 )
 {
+    CommandResult cr;
+
     // card ID procedure
     if (!Command_GoIdle()) { async_return(false); }
 
@@ -113,9 +166,9 @@ async_def(
 
     // wait for init to complete, sending back whatever voltages the card supports
     f.init = RESP1 & (SD_OpCondHS | SD_OpCondVoltages);
-    if (!AppCommand_SendOpCond(f.init))
+    if (!(cr = AppCommand_SendOpCond(f.init)))
     {
-        MYDBG("Failed to start card init: %X", STA);
+        MYDBG("Failed to start card init: %X", cr);
         async_return(false);
     }
 
@@ -124,9 +177,9 @@ async_def(
     for (;;)
     {
         async_yield();
-        if (!AppCommand_SendOpCond(f.init))
+        if (!(cr = AppCommand_SendOpCond(f.init)))
         {
-            MYDBG("Error during card init: %X", STA);
+            MYDBG("Error during card init: %X", cr);
             async_return(false);
         }
 
@@ -143,17 +196,17 @@ async_def(
         }
     }
 
-    if (!Command_AllSendCid())
+    if (!(cr = Command_AllSendCid()))
     {
-        MYDBG("Failed to retrieve CID: %08X", STA);
+        MYDBG("Failed to retrieve CID: %08X", cr);
         async_return(false);
     }
 
     info.cid = ResultCid();
 
-    if (!Command_SendRelativeAddr())
+    if (!(cr = Command_SendRelativeAddr()))
     {
-        MYDBG("Failed to retrieve RCA: %08X", STA);
+        MYDBG("Failed to retrieve RCA: %08X", cr);
         async_return(false);
     }
     info.rca = ResultRca();
@@ -161,9 +214,9 @@ async_def(
     // try switching to high speed
     Configure(CardClockDivisor(1));
 
-    if (!Command_SendCsd(info.rca.rca))
+    if (!(cr = Command_SendCsd(info.rca.rca)))
     {
-        MYDBG("Failed to retrieve CSD or communicate with card at full speed: %08X", STA);
+        MYDBG("Failed to retrieve CSD or communicate with card at full speed: %08X", cr);
         async_return(false);
     }
     info.csd = ResultCsd();
@@ -188,10 +241,3 @@ async_def(
     async_return(true);
 }
 async_end
-
-/*
-400E00325B59000039B37F800A4000F8
-
-01 000000 | 00001110 | 00000000 | 00110010 |
-01011011|0101 1001 | 0 0 0 0 00 00|00000000 | 00 111 001 | 101 100 11|0 1 1111111 0000000 0 00 010 1001 0 00000 0 0 0 0 00 0 0 11111000
-*/

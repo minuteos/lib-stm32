@@ -89,6 +89,8 @@ async_def(
     unsigned t0, t1;
 )
 {
+    SDMMC::CommandResult cr;
+
     f.sec = sectorStart;
     f.buf = buf;
     for (f.i = 0; f.i < sectorCount; f.i++)
@@ -101,37 +103,28 @@ async_def(
         }
 
         // TODO: multi-block read
-        ASSERT(!dma.IsEnabled());
-        dma.Descriptor() = DMADescriptor::Transfer(&sd.FIFO, f.buf, FF_MAX_SS / 4,
-            DMADescriptor::IncrementMemory | DMADescriptor::P2M | DMADescriptor::UnitWord | DMADescriptor::PrioLow);
-        dma.ClearAndEnable();
-
-        sd.DTIMER = 48000000;
-        sd.DLEN = FF_MAX_SS;
-        sd.Configure(sd.DataTransferStart() | sd.DataTransferDirection(true) | sd.DataTransferDma() | sd.DataTransferBlockSize(FF_MAX_SS));
-        if (!sd.Command_ReadSingleBlock(f.sec * addrMul))
+        sd.ConfigureDmaRead(dma, Buffer(f.buf, FF_MAX_SS));
+        if (!(cr = sd.Command_ReadSingleBlock(f.sec * addrMul)))
         {
-            dma.Disable();
-            dma.ClearInterrupt();
-            MYDBG("Failed to start reading sector %X: %X", f.sec, sd.STA);
+            sd.AbortDmaTransfer(dma);
+            MYDBG("Failed to start reading sector %X: %X", f.sec, cr);
             Status(STA_NODISK | STA_NOINIT);
             async_return(RES_ERROR);
         }
 
         MYTRACE("Reading sector %X, RS: %X", f.sec, sd.RESP1);
-        if (!await(sd.WaitForComplete, Timeout::Seconds(1)))
+        if (!await(sd.WaitNotBusy, Timeout::Seconds(1)))
         {
-            dma.Disable();
-            dma.ClearInterrupt();
+            sd.AbortDmaTransfer(dma);
             MYDBG("Timeout while reading sector %X", f.sec);
             Status(STA_NODISK | STA_NOINIT);
             async_return(RES_ERROR);
         }
-        dma.Disable();
-        ASSERT(dma.CNDTR == 0);
-        if (!sd.ReadDataResult())
+
+        auto dr = sd.CompleteDmaTransfer(dma);
+        if (!dr)
         {
-            MYDBG("Error while reading sector %X: %X", f.sec, sd.STA);
+            MYDBG("Error while reading sector %X: %X", f.sec, dr);
             Status(STA_NODISK | STA_NOINIT);
             async_return(RES_ERROR);
         }
@@ -166,8 +159,6 @@ async_def(
         // TODO: multi-block write
         ASSERT(!dma.IsEnabled());
 
-        sd.DTIMER = 48000000;
-        sd.DLEN = FF_MAX_SS;
         if (!sd.Command_WriteBlock(f.sec * addrMul))
         {
             MYDBG("Failed to start writing sector %X: %X", f.sec, sd.STA);
@@ -176,23 +167,17 @@ async_def(
         }
 
         MYTRACE("Writing sector %X from %p, RS: %X", f.sec, f.buf, sd.RESP1);
-        dma.Descriptor() = DMADescriptor::Transfer(f.buf, &sd.FIFO, FF_MAX_SS / 4,
-            DMADescriptor::IncrementMemory | DMADescriptor::M2P | DMADescriptor::UnitWord | DMADescriptor::PrioLow);
-        dma.ClearAndEnable();
-        sd.ICR = SDMMC_STA_DATAEND | SDMMC_STA_DBCKEND | SDMMC_STA_DCRCFAIL | SDMMC_STA_DTIMEOUT;
-        sd.Configure(sd.DataTransferStart() | sd.DataTransferDirection(false) | sd.DataTransferDma() | sd.DataTransferBlockSize(FF_MAX_SS));
-        if (!await(sd.WaitForComplete, Timeout::Seconds(1)))
+        sd.ConfigureDmaWrite(dma, Span(f.buf, FF_MAX_SS));
+        if (!await(sd.WaitNotBusy, Timeout::Seconds(1)))
         {
-            dma.Disable();
-            dma.ClearInterrupt();
+            sd.AbortDmaTransfer(dma);
             MYDBG("Timeout while writing sector %X", f.sec);
             Status(STA_NODISK | STA_NOINIT);
             async_return(RES_ERROR);
         }
-        dma.Disable();
-        ASSERT(dma.CNDTR == 0);
 
-        if (!sd.ReadDataResult())
+        auto dr = sd.CompleteDmaTransfer(dma);
+        if (!dr)
         {
             MYDBG("Error while writing sector %X: %X", f.sec, sd.STA);
             Status(STA_NODISK | STA_NOINIT);

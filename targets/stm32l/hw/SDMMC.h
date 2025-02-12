@@ -105,7 +105,7 @@ struct SDMMC : SDMMC_TypeDef
     struct CommandResult
     {
     public:
-        constexpr CommandResult(uint32_t sta) : res(sta) {}
+        constexpr CommandResult(uint32_t sta = 0) : res(sta) {}
         constexpr operator bool() const { return Success(); }
 
         constexpr bool Success() const { return res & (SDMMC_STA_CMDSENT | SDMMC_STA_CMDREND); }
@@ -145,8 +145,6 @@ struct SDMMC : SDMMC_TypeDef
     CommandResult Command_SendStatus(uint16_t rca) { return Command(CmdSendStatus, rca << 16); }
     CommandResult Command_ReadSingleBlock(uint32_t address) { return Command(CmdReadSingleBlock, address); }
     CommandResult Command_WriteBlock(uint32_t address) { return Command(CmdWriteBlock, address); }
-
-    DataResult ReadDataResult() const { return STA; }
 
     CommandResult AppCommand_Test() { return Command(CmdApp, 0); }
     CommandResult AppCommand_SendOpCond(uint32_t arg) { return Command(ACmdSendOpCond, arg); }
@@ -354,6 +352,15 @@ struct SDMMC : SDMMC_TypeDef
 
     #pragma endregion
 
+    #pragma region Configuration helpers
+
+    void ConfigureDmaRead(DMAChannel& dma, Buffer buf);
+    void ConfigureDmaWrite(DMAChannel& dma, Span buf);
+    DataResult AbortDmaTransfer(DMAChannel& dma);
+    DataResult CompleteDmaTransfer(DMAChannel& dma);
+
+    #pragma endregion
+
     #pragma region High-level interface
 
     struct CardInfo
@@ -366,7 +373,6 @@ struct SDMMC : SDMMC_TypeDef
 
     async(Initialize);
     async(IdentifyCard, CardInfo& ci);
-    async_once(WaitForComplete, OPT_TIMEOUT_ARG) { return async_forward(WaitMaskNot, STA, SDMMC_STA_DBCKEND | SDMMC_STA_DCRCFAIL | SDMMC_STA_DTIMEOUT, 0, timeout); }
     async_once(WaitNotBusy, OPT_TIMEOUT_ARG) { return async_forward(WaitMask, STA, SDMMC_STA_TXACT | SDMMC_STA_RXACT, 0, timeout); }
 
     #pragma endregion
