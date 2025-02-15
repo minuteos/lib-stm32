@@ -26,6 +26,8 @@ public:
     virtual async(Init) final override;
     async(Test);
 
+    const SDMMC::CardInfo& CardInfo() const { return ci; }
+
 protected:
     virtual async(Read, void* buf, LBA_t sectorStart, size_t sectorCount) final override;
     virtual async(Write, const void* buf, LBA_t sectorStart, size_t sectorCount) final override;
