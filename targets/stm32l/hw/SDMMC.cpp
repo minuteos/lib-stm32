@@ -159,13 +159,14 @@ async_def(
     }
 
     // query voltage ranges
-    if (!AppCommand_SendOpCond(SD_OpCondHS * f.v2)) { async_return(false); }
+    f.init = SD_OpCondHS * f.v2;
+    if (!AppCommand_SendOpCond(f.init)) { async_return(false); }
 
     // at this point, we're definitely talking to a real card,
     // log any errors encountered
 
     // wait for init to complete, sending back whatever voltages the card supports
-    f.init = RESP1 & (SD_OpCondHS | SD_OpCondVoltages);
+    f.init |= RESP1 & SD_OpCondVoltages;
     if (!(cr = AppCommand_SendOpCond(f.init)))
     {
         MYDBG("Failed to start card init: %X", cr);
