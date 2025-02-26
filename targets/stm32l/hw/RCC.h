@@ -15,6 +15,21 @@
 
 struct _RCC : RCC_TypeDef
 {
+    enum struct ResetCause : uint32_t
+    {
+        Firewall = RCC_CSR_FWRSTF,
+        OptionByteLoad = RCC_CSR_OBLRSTF,
+        Hardware = RCC_CSR_PINRSTF,
+        Brownout = RCC_CSR_BORRSTF,
+        Software = RCC_CSR_SFTRSTF,
+        IWatchdog = RCC_CSR_IWDGRSTF,
+        WWatchdog = RCC_CSR_WWDGRSTF,
+        LowPower = RCC_CSR_LPWRRSTF,
+
+        Watchdog = IWatchdog | WWatchdog,
+        _Mask = Firewall | OptionByteLoad | Hardware | Brownout | Software | Watchdog | LowPower,
+    };
+
     void EnableI2C(unsigned index)
     {
         ASSERT(index < 3);
@@ -28,4 +43,12 @@ struct _RCC : RCC_TypeDef
         AHB1ENR |= RCC_AHB1ENR_DMA1EN << index;
         __DSB();
     }
+
+    static enum ResetCause ResetCause() { return s_resetCause; }
+
+    static void __CaptureResetCause();
+private:
+    static enum ResetCause s_resetCause;
 };
+
+DEFINE_FLAG_ENUM(enum _RCC::ResetCause);
