@@ -177,6 +177,8 @@ public:
 #ifdef Ckernel
     //! Waits for the pin to have the specified state
     async_once(WaitFor, bool state, Timeout timeout = Timeout::Infinite);
+    //! Waits for the pin to have the specified state, ignoring changes shorter than debounce
+    async(WaitForWithDebounce, bool state, Timeout debounce, Timeout timeout = Timeout::Infinite);
 #endif
 
     //! Gets the input state of the GPIOPin
@@ -320,6 +322,7 @@ private:
     void Configure(uint32_t mask, enum GPIOPin::Mode mode);
 #ifdef Ckernel
     async_once(WaitFor, uint32_t indexAndState, Timeout timeout = Timeout::Infinite);
+    async(WaitForWithDebounce, uint32_t indexAndState, Timeout debounce, Timeout timeout = Timeout::Infinite);
 #endif
 
 #if TRACE
@@ -343,6 +346,7 @@ ALWAYS_INLINE constexpr GPIOPinID GPIOPin::GetID() const { return GPIOPinID(GPIO
 ALWAYS_INLINE void GPIOPin::Configure(Mode mode) const { port->Configure(mask, mode); }
 #ifdef Ckernel
 ALWAYS_INLINE async_once(GPIOPin::WaitFor, bool state, Timeout timeout) { return async_forward(Port().WaitFor, (state << 4) | Index(), timeout); }
+ALWAYS_INLINE async(GPIOPin::WaitForWithDebounce, bool state, Timeout debounce, Timeout timeout) { return async_forward(Port().WaitForWithDebounce, (state << 4) | Index(), debounce, timeout); }
 #endif
 
 ALWAYS_INLINE void GPIOPin::Set() const { port->BSRR = mask; }

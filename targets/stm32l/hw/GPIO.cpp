@@ -132,4 +132,22 @@ async_once_def(
     async_return(result);
 }
 async_end
+
+async(GPIOPort::WaitForWithDebounce, uint32_t indexAndState, Timeout debounce, Timeout timeout)
+async_def(
+    Timeout timeout;
+)
+{
+    f.timeout = timeout.MakeAbsolute();
+    do
+    {
+        if (!await(WaitFor, indexAndState, f.timeout))
+        {
+            async_return(false);
+        }
+    } while (await(WaitFor, indexAndState ^ 0x10, debounce));
+    async_return(true);
+}
+async_end
+
 #endif
