@@ -8,14 +8,18 @@
 
 #include "FLASH.h"
 
+static constexpr uint32_t FLASH_CR_PMASK = FLASH_CR_PG | FLASH_CR_PER | FLASH_CR_BKER | FLASH_CR_PNB;
+
 bool _FLASH::WriteDouble(const volatile void* ptr, uint32_t lo, uint32_t hi)
 {
     volatile uint32_t* wptr = (volatile uint32_t*)ptr;
 
-    Unlock();
+    PLATFORM_CRITICAL_SECTION();
     while (SR & FLASH_SR_BSY);
+    ASSERT(Locked());
+    Unlock();
     SR = 0xFFFF;    // clear all errors
-    CR |= FLASH_CR_PG;
+    MODMASK(CR, FLASH_CR_PMASK, FLASH_CR_PG);
     wptr[0] = lo;
     wptr[1] = hi;
     while (SR & FLASH_SR_BSY);
@@ -33,10 +37,12 @@ bool _FLASH::Write(const volatile void* ptr, Span data)
     volatile uint32_t* wptr = (volatile uint32_t*)ptr;
     auto rptr = data.Pointer<uint32_t>();
 
-    Unlock();
+    PLATFORM_CRITICAL_SECTION();
     while (SR & FLASH_SR_BSY);
+    ASSERT(Locked());
+    Unlock();
     SR = 0xFFFF;    // clear all errors
-    CR |= FLASH_CR_PG;
+    MODMASK(CR, FLASH_CR_PMASK, FLASH_CR_PG);
 
     size_t dwords = (len + 7) >> 3;
     for (; dwords; dwords--)
@@ -77,15 +83,18 @@ bool _FLASH::Erase(const volatile void* ptr, uint32_t length)
     int n = intptr_t(ptr) / PageSize;
     int ne = (intptr_t(ptr) + length - 1) / PageSize;
 
-    Unlock();
-
     while (n <= ne)
     {
-        while (SR & FLASH_SR_BSY);
-        SR = 0xFFFF;    // clear all errors
-        MODMASK(CR,
-            FLASH_CR_PER | FLASH_CR_PNB | FLASH_CR_BKER | FLASH_CR_STRT,
-            FLASH_CR_PER | (n << FLASH_CR_PNB_Pos) | FLASH_CR_STRT);
+        {
+            PLATFORM_CRITICAL_SECTION();
+            while (SR & FLASH_SR_BSY);
+            ASSERT(Locked());
+            Unlock();
+            SR = 0xFFFF;    // clear all errors
+            MODMASK(CR, FLASH_CR_PMASK,
+                FLASH_CR_PER | (n << FLASH_CR_PNB_Pos) | FLASH_CR_STRT);
+            Lock();
+        }
         while (SR & FLASH_SR_BSY);
 
         if (!Span((const void*)(n * PageSize), PageSize).IsAllOnes())
@@ -95,8 +104,6 @@ bool _FLASH::Erase(const volatile void* ptr, uint32_t length)
 
         n++;
     }
-
-    Lock();
 
     return n > ne;
 }
@@ -112,16 +119,23 @@ async_def(
 )
 {
     f.n = intptr_t(ptr) / PageSize;
-    // number of first and last page to erase
-    Unlock();
+
+    for (;;)
+    {
+        await_mask(SR, FLASH_SR_BSY, 0);
+
+        PLATFORM_CRITICAL_SECTION();
+        if (SR & FLASH_SR_BSY) { continue; }    // try again
+        ASSERT(Locked());
+        Unlock();
+        SR = 0xFFFF;    // clear all errors
+        MODMASK(CR, FLASH_CR_PMASK,
+            FLASH_CR_PER | (f.n << FLASH_CR_PNB_Pos) | FLASH_CR_STRT);
+        Lock();
+        break;
+    }
+
     await_mask(SR, FLASH_SR_BSY, 0);
-    SR = 0xFFFF;    // clear all errors
-    MODMASK(CR,
-        FLASH_CR_PER | FLASH_CR_PNB | FLASH_CR_BKER | FLASH_CR_STRT,
-        FLASH_CR_PER | (f.n << FLASH_CR_PNB_Pos) | FLASH_CR_STRT);
-    await_mask(SR, FLASH_SR_BSY, 0);
-    CR &= ~(FLASH_CR_PER | FLASH_CR_PNB | FLASH_CR_BKER);
-    Lock();
 
     async_return(Span((const void*)(f.n * PageSize), PageSize).IsAllOnes());
 }

@@ -30,14 +30,12 @@ public:
     async(ErasePage, const volatile void* ptr);
 
 private:
-    void Unlock()
+    ALWAYS_INLINE bool Locked() const { return CR & FLASH_CR_LOCK; }
+    ALWAYS_INLINE void Unlock()
     {
         KEYR = 0x45670123;
         KEYR = 0xCDEF89AB;
     };
 
-    void Lock()
-    {
-        CR |= FLASH_CR_LOCK;
-    }
+    ALWAYS_INLINE void Lock() { CR |= FLASH_CR_LOCK;}
 };
