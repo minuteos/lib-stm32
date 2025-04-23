@@ -69,7 +69,7 @@ void _stm32_rtc_init()
         RTC->Lock();
     }
 
-#ifdef DEBUG
+#if DEBUG
     // freeze RTC when debugging
     DBGMCU->APB1FZR1 |= DBGMCU_APB1FZR1_DBG_RTC_STOP;
     // allow debugging in low power modes
