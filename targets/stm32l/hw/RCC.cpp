@@ -29,8 +29,8 @@ void _RCC::__CaptureResetCause()
         TRACE_CAUSE("RST", ResetCause::Hardware);
         TRACE_CAUSE("BOR", ResetCause::Brownout);
         TRACE_CAUSE("SFT", ResetCause::Software);
-        TRACE_CAUSE("IWDG", ResetCause::WWatchdog);
-        TRACE_CAUSE("WWDG", ResetCause::IWatchdog);
+        TRACE_CAUSE("IWDG", ResetCause::IWatchdog);
+        TRACE_CAUSE("WWDG", ResetCause::WWatchdog);
         TRACE_CAUSE("LPWR", ResetCause::LowPower);
 #undef TRACE_CAUSE
         _DBGCHAR('\n');
