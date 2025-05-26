@@ -24,7 +24,7 @@ public:
     USARTTransmitter(USART* usart)
         : usart(usart), transmitter(new USARTInterruptTransmitter(USARTInterrupt::Get(usart))) {}
     template<unsigned n> USARTTransmitter(_USART<n>* usart)
-        : usart(usart), transmitter(new DMATransmitter(*usart->DmaTx(), &usart->TDR, DMADescriptor::PrioVeryHigh)) {}
+        : usart(usart), transmitter(new DMATransmitter(*usart->DmaTx(), &usart->TDR, DMADescriptor::PrioHigh)) {}
 
     ~USARTTransmitter() { delete transmitter; }
 

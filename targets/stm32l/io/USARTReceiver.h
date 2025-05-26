@@ -24,9 +24,9 @@ public:
     USARTReceiver(USART* usart)
         : usart(usart), receiver(new USARTInterruptReceiver(USARTInterrupt::Get(usart))) {}
     template<unsigned n> USARTReceiver(_USART<n>* usart)
-        : usart(usart), receiver(new DMAReceiver(*usart->DmaRx(), &usart->RDR, DMADescriptor::PrioVeryHigh)) {}
+        : usart(usart), receiver(new DMAReceiver(*usart->DmaRx(), &usart->RDR, DMADescriptor::PrioHigh)) {}
     template<unsigned n> USARTReceiver(_USART<n>* usart, size_t bufferSize)
-        : usart(usart), receiver(CreateDMAReceiverCircularWithBuffer(*usart->DmaRx(), &usart->RDR, bufferSize, DMADescriptor::PrioVeryHigh)) {}
+        : usart(usart), receiver(CreateDMAReceiverCircularWithBuffer(*usart->DmaRx(), &usart->RDR, bufferSize, DMADescriptor::PrioHigh)) {}
 
     ~USARTReceiver() { delete receiver; }
 
