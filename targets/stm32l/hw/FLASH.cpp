@@ -35,7 +35,7 @@ bool _FLASH::Write(const volatile void* ptr, Span data)
     if (!len) { return true; }    // nothing to write
 
     volatile uint32_t* wptr = (volatile uint32_t*)ptr;
-    auto rptr = data.Pointer<uint32_t>();
+    auto rptr = data.Pointer<volatile uint32_t>();
 
     PLATFORM_CRITICAL_SECTION();
     while (SR & FLASH_SR_BSY);
