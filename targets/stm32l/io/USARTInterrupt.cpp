@@ -75,7 +75,7 @@ OPTIMIZE void USARTInterrupt::Buf::ReadInto(volatile uint16_t* reg)
 {
     auto p = this->p, e = this->e;
     *reg = *p++;
-    if (p == e)
+    if (p == e && p2)
     {
         this->p = p2;
         this->e = e2;
