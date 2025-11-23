@@ -71,7 +71,7 @@ OPTIMIZE void USARTInterrupt::Buf::Write(char b)
     }
 }
 
-OPTIMIZE void USARTInterrupt::Buf::ReadInto(volatile uint16_t* reg)
+OPTIMIZE void USARTInterrupt::Buf::ReadInto(volatile uint32_t* reg)
 {
     auto p = this->p, e = this->e;
     *reg = *p++;

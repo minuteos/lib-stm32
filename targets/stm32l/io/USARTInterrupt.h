@@ -46,7 +46,7 @@ private:
         bool CanAdd() const { return !p2; }
         operator char*() const { return p; }
         void Write(char b);
-        void ReadInto(volatile uint16_t* p);
+        void ReadInto(volatile uint32_t* p);
     };
 
     void Handler();
