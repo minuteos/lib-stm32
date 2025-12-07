@@ -38,8 +38,8 @@ void _stm32_sysclk_init()
 #error "Unsupported HSE frequency"
 #endif
 
-    // enable main PLL output
-    RCC->PLLCFGR |= RCC_PLLCFGR_PLLREN;
+    // enable main and 48 MHz PLL output
+    RCC->PLLCFGR |= RCC_PLLCFGR_PLLREN | RCC_PLLCFGR_PLLQEN;
     // enable PLL
     RCC->CR |= RCC_CR_PLLON;
     // wait for PLL ready
@@ -47,6 +47,7 @@ void _stm32_sysclk_init()
 
     // select PLL for clock
     RCC->CFGR = RCC_CFGR_SW_PLL;
+    MODMASK(RCC->CCIPR, RCC_CCIPR_CLK48SEL, RCC_CCIPR_CLK48SEL_1);  // use PLLQ for 48 MHz
     SystemCoreClock = 72000000;
 #endif
 
