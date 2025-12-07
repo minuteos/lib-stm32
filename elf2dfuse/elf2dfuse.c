@@ -29,6 +29,7 @@
 #define USB_VENDOR_ID	 0x0483
 #define USB_PRODUCT_ID 0xdf11
 #define DFU_SUFFIX_SIZE 16
+#define ELEMENT_ALIGNMENT 2048
 
 typedef struct Elf32_Ehdr
 {
@@ -337,7 +338,7 @@ int main(int argc, char *argv[])
 	Elf32_Phdr *ph;
 	Elf32_Shdr sh;
 	struct memory_blob *blob, *pm_list, *seek;
-	uint32_t phy_addr, image_elements, file_size, crc32, target_size, element_size;
+	uint32_t phy_addr, image_elements, file_size, crc32, target_size, element_size, padded_size;
 	uint8_t scratchpad[274 /* sized specifically for DfuSe Target Prefix */];
 
 	if (argc < 3)
@@ -420,7 +421,7 @@ int main(int argc, char *argv[])
 	count the number of non-contiguous memory "image_elements" as well as tabulate the total file size
 	*/
 
-	blob = pm_list; image_elements = 1; i = 0;
+	blob = pm_list; image_elements = 0; i = 0;
 	/*
 	ST's UM0391 Rev 1 states the "The DFUImageSize field, four-byte coded, presents the total DFU file length in bytes".
 	This seems to include it should the DFU suffix length.  However, adopting the behavior of excluding the DFU suffix length
@@ -432,19 +433,23 @@ int main(int argc, char *argv[])
 	{
 		phy_addr = blob->address;
 		file_size += 8 /* Image Element */; target_size += 8 /* Image Element */;
+		element_size = 0;
 
 		while (blob)
 		{
 			if (phy_addr != blob->address)
 			{
-				image_elements++;
 				break;
 			}
 
-			phy_addr += blob->count; file_size += blob->count; target_size += blob->count;
+			phy_addr += blob->count; element_size += blob->count;
 
 			blob = blob->next;
 		}
+
+		image_elements++;
+		padded_size = (element_size + ELEMENT_ALIGNMENT - 1) & ~(ELEMENT_ALIGNMENT - 1);
+		file_size += padded_size; target_size += padded_size;
 	}
 
 	/*
@@ -520,15 +525,17 @@ int main(int argc, char *argv[])
 		write unique-to-ST DfuSe 'Image Element' prefix (providing origin address and size)
 		*/
 
+		padded_size = (element_size + ELEMENT_ALIGNMENT - 1) & ~(ELEMENT_ALIGNMENT - 1); // pad to 2048 byte boundary
+
 		i = 0;
 		scratchpad[i++] = (uint8_t)(blob->address >> 0);
 		scratchpad[i++] = (uint8_t)(blob->address >> 8);
 		scratchpad[i++] = (uint8_t)(blob->address >> 16);
 		scratchpad[i++] = (uint8_t)(blob->address >> 24);
-		scratchpad[i++] = (uint8_t)(element_size >> 0);
-		scratchpad[i++] = (uint8_t)(element_size >> 8);
-		scratchpad[i++] = (uint8_t)(element_size >> 16);
-		scratchpad[i++] = (uint8_t)(element_size >> 24);
+		scratchpad[i++] = (uint8_t)(padded_size >> 0);
+		scratchpad[i++] = (uint8_t)(padded_size >> 8);
+		scratchpad[i++] = (uint8_t)(padded_size >> 16);
+		scratchpad[i++] = (uint8_t)(padded_size >> 24);
 
 		crc32 = crc32_calc(crc32, scratchpad, i);
 		fwrite(scratchpad, i, 1, dfufp);
@@ -538,7 +545,18 @@ int main(int argc, char *argv[])
 			crc32 = crc32_calc(crc32, blob->data, blob->count);
 			fwrite(blob->data, blob->count, 1, dfufp);
 			element_size -= blob->count;
+			padded_size -= blob->count;
 			blob = blob->next;
+		}
+
+		memset(scratchpad, 0xFF, sizeof(scratchpad));
+
+		while (padded_size)
+		{
+			i = padded_size > sizeof(scratchpad) ? sizeof(scratchpad) : padded_size;
+			crc32 = crc32_calc(crc32, scratchpad, i);
+			fwrite(scratchpad, i, 1, dfufp);
+			padded_size -= i;
 		}
 	}
 
