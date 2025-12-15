@@ -6,5 +6,5 @@
 # stm32l47/Include.mk
 #
 
-TARGETS += stm32l4
+TARGETS += stm32l4 stm32-otgfs
 DEFINES += STM32L476xx=
