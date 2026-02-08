@@ -546,7 +546,7 @@ async_def()
                 case SetupPacket::StdClearFeature: HandleControlFeature(setup, false); break;
                 case SetupPacket::StdSetFeature: HandleControlFeature(setup, true); break;
                 case SetupPacket::StdSetAddress: HandleControlSetAddress(setup); break;
-                case SetupPacket::StdGetDescriptor: HandleControlGetDescriptor(setup); break;
+                case SetupPacket::StdGetDescriptor: await(HandleControlGetDescriptor, setup); break;
                 case SetupPacket::StdGetConfiguration: HandleControlGetConfiguration(setup); break;
                 case SetupPacket::StdSetConfiguration: await(HandleControlSetConfiguration, setup);
                 default: break;
@@ -676,24 +676,37 @@ void Device::HandleControlSetAddress(SetupPacket setup)
     ControlSuccess();
 }
 
-void Device::HandleControlGetDescriptor(SetupPacket setup)
+async(Device::HandleControlGetDescriptor, SetupPacket setup)
+async_def(
+    size_t len;
+)
 {
     USBDIAG("GET_DESCRIPTOR %04X ID %d len %d", setup.wValue, setup.wIndex, setup.wLength);
     if (setup.recipient != SetupPacket::RecipientDevice ||
         setup.direction != SetupPacket::DirIn)
     {
         USBDEBUG("!!! GET_DESCRIPTOR packet corrupted");
-        return;
+        async_return(false);
     }
 
+    // give the callback a chance to handle the request
+    f.len = await(callbacks->GetDescriptor, setup, Buffer(ctrl.data).RemoveLeft(2));
+
     Span data;
-    switch (setup.descriptorType)
+
+    if (f.len)
+    {
+        ctrl.data[0] = f.len + 2;
+        ctrl.data[1] = uint8_t(setup.descriptorType);
+        data = Span(ctrl.data, f.len + 2);
+    }
+    else switch (setup.descriptorType)
     {
         case DescriptorType::Device:
             if (setup.descriptorIndex != 0)
             {
                 USBDEBUG("!!! GET_DEVICE_DESCRIPTOR %d > 0", setup.descriptorIndex);
-                return;
+                async_return(false);
             }
 
             data = deviceDescriptor;
@@ -704,7 +717,7 @@ void Device::HandleControlGetDescriptor(SetupPacket setup)
             if (setup.descriptorIndex >= configDescriptorCount)
             {
                 USBDEBUG("!!! GET_CONFIG_DESCRIPTOR %d >= %d", setup.descriptorIndex, configDescriptorCount);
-                return;
+                async_return(false);
             }
 
             auto desc = configDescriptors[setup.descriptorIndex];
@@ -729,7 +742,7 @@ void Device::HandleControlGetDescriptor(SetupPacket setup)
             if (!desc)
             {
                 USBDEBUG("!!! GET_STRING_DESCRIPTOR %d >= %d", setup.descriptorIndex, nValid);
-                return;
+                async_return(false);
             }
 
             data = Span(desc, desc->len);
@@ -741,7 +754,9 @@ void Device::HandleControlGetDescriptor(SetupPacket setup)
     }
 
     ControlSuccess(data);
+    async_return(true);
 }
+async_end
 
 void Device::HandleControlGetConfiguration(SetupPacket setup)
 {

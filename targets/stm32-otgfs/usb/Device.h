@@ -25,6 +25,7 @@ class DeviceCallbacks
 
 protected:
     virtual async(HandleControl, SetupPacket pkt, Span packet) async_def_return(false);
+    virtual async(GetDescriptor, SetupPacket pkt, Buffer buf) async_def_return(0);
     virtual async(OnConfigured, const ConfigDescriptorHeader* config) async_def_return(false);
 };
 
@@ -159,7 +160,7 @@ private:
     void HandleControlGetStatus(SetupPacket setup);
     void HandleControlFeature(SetupPacket setup, bool set);
     void HandleControlSetAddress(SetupPacket setup);
-    void HandleControlGetDescriptor(SetupPacket setup);
+    async(HandleControlGetDescriptor, SetupPacket setup);
     void HandleControlGetConfiguration(SetupPacket setup);
     async(HandleControlSetConfiguration, SetupPacket setup);
 
