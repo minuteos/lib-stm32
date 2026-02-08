@@ -340,6 +340,7 @@ int main(int argc, char *argv[])
 	struct memory_blob *blob, *pm_list, *seek;
 	uint32_t phy_addr, image_elements, file_size, crc32, target_size, element_size, padded_size;
 	uint8_t scratchpad[274 /* sized specifically for DfuSe Target Prefix */];
+	uint16_t vid, pid;
 
 	if (argc < 3)
 	{
@@ -359,6 +360,24 @@ int main(int argc, char *argv[])
 		fclose(elffp);
 		printf("ERROR: unable to open file <%s> for writing\n", argv[2]);
 		return -1;
+	}
+
+	if (argc > 3)
+	{
+		vid = (uint16_t)strtoul(argv[3], NULL, 0);
+	}
+	else
+	{
+		vid = USB_VENDOR_ID;
+	}
+
+	if (argc > 4)
+	{
+		pid = (uint16_t)strtoul(argv[4], NULL, 0);
+	}
+	else
+	{
+		pid = USB_PRODUCT_ID;
 	}
 
 	/*
@@ -567,10 +586,10 @@ int main(int argc, char *argv[])
 	i = 0;
 	scratchpad[i++] = 0xFF; // bcdDevice
 	scratchpad[i++] = 0xFF;
-	scratchpad[i++] = (uint8_t)(USB_PRODUCT_ID >> 0); // idProduct
-	scratchpad[i++] = (uint8_t)(USB_PRODUCT_ID >> 8);
-	scratchpad[i++] = (uint8_t)(USB_VENDOR_ID >> 0); // idVendor
-	scratchpad[i++] = (uint8_t)(USB_VENDOR_ID >> 8);
+	scratchpad[i++] = (uint8_t)(pid >> 0); // idProduct
+	scratchpad[i++] = (uint8_t)(pid >> 8);
+	scratchpad[i++] = (uint8_t)(vid >> 0); // idVendor
+	scratchpad[i++] = (uint8_t)(vid >> 8);
 	scratchpad[i++] = 0x1A; // bcdDFU
 	scratchpad[i++] = 0x01;
 	scratchpad[i++] = (uint8_t)'U'; // ucDfuSignature
