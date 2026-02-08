@@ -182,6 +182,8 @@ void Device::IRQHandler()
         state = State::Default;
         ControlState(ControlState::Idle);
         USBDEBUG("RESET");
+        callbacks->OnReset();
+
         usb->DeviceAddress(0);
 
         //  reset all endpoints

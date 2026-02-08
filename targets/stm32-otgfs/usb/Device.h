@@ -27,6 +27,8 @@ protected:
     virtual async(HandleControl, SetupPacket pkt, Span packet) async_def_return(false);
     virtual async(GetDescriptor, SetupPacket pkt, Buffer buf) async_def_return(0);
     virtual async(OnConfigured, const ConfigDescriptorHeader* config) async_def_return(false);
+
+    virtual void OnReset() {}
 };
 
 class Device
